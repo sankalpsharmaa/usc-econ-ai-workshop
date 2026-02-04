@@ -31,7 +31,7 @@ Building web scrapers without writing code manually. Covers project initializati
 
 Each session folder contains slides and code examples. Video recordings are available in the linked Dropbox folder.
 
-[Workshop Recordings (Dropbox)](link-to-dropbox)
+[OneDrive Link](https://onedrive.live.com/?redeem=aHR0cHM6Ly8xZHJ2Lm1zL2YvYy81Yjc4NzljODdhZDI1NjhmL0lnQmtXblRGVUtmU1RvWUtDbUpVNW05a0FVSk9KSE9oaE5yRTM4Mi10d3hzRVVJ&id=5B7879C87AD2568F%21sc5745a64a7504ed2860a0a6254e66f64&cid=5B7879C87AD2568F)
 
 ## Prerequisites
 
