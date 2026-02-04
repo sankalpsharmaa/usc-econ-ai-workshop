@@ -1,0 +1,21 @@
+review_id,review_text,true_is_political,pred_is_political,reasoning,reasoning_words
+1,"This is pure woke messaging. I came for a superhero movie, got a lecture.",1,1,"The review highlights 'woke messaging' and describes the film as a lecture, indicating a direct engagement with political ideologies.",19
+2,Another Hollywood agenda piece. The politics are louder than the plot.,1,1,"The review highlights an 'agenda' and suggests that politics overshadows the narrative, indicating a political framing in the content.",19
+3,SJW propaganda dressed up as entertainment. Hard pass.,1,1,"The term 'SJW propaganda' signals a political stance, aligning the content with ideological debates, making it inherently political in nature.",20
+4,They turned a fun franchise into culture-war content. Not subtle.,1,1,"The review highlights 'culture-war content,' suggesting a critique of the franchise's political influences, which affects its reception and interpretation.",21
+5,The script is basically activism. If you disagree you’re the villain.,1,1,"The term 'activism' implies a political agenda, and framing disagreement as villainy indicates ideological conflict, both pointing to political content.",20
+6,I’m tired of identity politics in every big release. Movie suffers for it.,1,1,"The mention of 'identity politics' shows an engagement with political themes, highlighting social and cultural divisions.",16
+7,This feels like a partisan talking point with CGI on top.,1,1,"The mention of 'partisan talking point' suggests a political context, indicating that the subject is influenced by political beliefs or agendas.",21
+8,"The movie is fine, but the marketing and reviews are political theater.",1,1,"The term 'political theater' directly relates to political contexts, highlighting the influence of political agendas and framing in the discussed subject.",21
+9,"Woke checklist writing: preachy, smug, and thin characters.",1,1,"The term 'woke' indicates an ideological stance, suggesting the review critiques a particular cultural and political narrative.",17
+10,"It’s not about the film anymore, it’s about the message. Obvious agenda.",1,1,"The mention of an 'obvious agenda' suggests the film promotes a specific political viewpoint, indicating its connection to political themes.",20
+11,"People will defend this for political reasons, not because it’s good.",1,1,"The mention of 'defend for political reasons' clearly indicates a connection to political issues, categorizing it as political in nature.",20
+12,Culture-war bait. The backlash and the praise are both political.,1,1,"The review discusses 'culture-war' themes and references political backlash and praise, which aligns it closely with political and ideological contexts.",21
+13,"If you dislike it, you’re labeled. That’s politics, not cinema.",1,1,"The review discusses politics and labeling, indicating a connection to political ideology and discourse.",14
+14,This is the kind of ideological scriptwriting that turns audiences off.,1,1,"The term 'ideological scriptwriting' suggests a focus on political messaging and perspectives, indicating a connection to political themes and discourse.",20
+15,It’s propaganda with a blockbuster budget.,1,1,"The term 'propaganda' implies a political intent, suggesting that the review discusses the work within a political framework.",18
+16,Boring pacing and flat dialogue. The villain was forgettable.,0,0,"The review focuses on the film's pacing, dialogue, and characterization without addressing any political themes or ideologies.",18
+17,Action scenes were fun but the story felt rushed.,0,0,"The review discusses action scene quality and story pacing, lacking any political themes or content.",15
+18,"Decent popcorn movie, but nothing memorable.",0,0,The review discusses entertainment value and does not address any political themes or messages.,14
+19,"Great visuals, weak character development.",0,0,"The review centers on aesthetics and character development, lacking any mention of political themes or implications.",16
+20,The jokes didn’t land and the plot twists were predictable.,0,0,"The review evaluates the humor and plot predictability of the movie, lacking any references to political or ideological elements.",19
