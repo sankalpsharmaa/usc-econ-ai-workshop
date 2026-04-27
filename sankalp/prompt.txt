@@ -1,0 +1,40 @@
+  **Task:** Write a prompt that would generate the implementation plan in
+  `/Users/sankalpsharma/.claude/plans/scope-arxiv-econ-gn-jiggly-cocke.md` (an arXiv econ.GN metadata
+  scrape, scoped to `sankalp/example/code/` and `sankalp/example/output/`, CSV deliverable, ~30-line
+  script for the USC econ workshop).
+
+  **Output:** The prompt itself, in a fenced code block. No commentary.
+
+  ---
+  You're helping me build a teaching artifact for the March 24, 2026 USC Economics AI Workshop session
+  "Agentic Web Scraping with Claude Code." I need an end-to-end runnable example that scrapes every paper
+  in arXiv's econ.GN (General Economics) category — roughly 3-5k records since the category opened in 2017
+   — and writes a CSV that workshop attendees can immediately open and inspect.
+
+  Constraints:
+  - Use arXiv's public API (http://export.arxiv.org/api/query). It's explicitly sanctioned for metadata
+  scraping. Honor the rate limit: 1 request per 3 seconds, single connection, no parallelization.
+  - Set a User-Agent header identifying the workshop and a contact email (ssharma9@usc.edu).
+  - Page through results with start and max_results (cap 200 per call).
+  - Sort by submittedDate ascending so re-runs are deterministic.
+  - Retry transient 503s up to 3 times with a 10-second backoff.
+  - Parse Atom XML with feedparser. Extract: id, submitted, updated, title, authors, primary category, all
+   categories, abstract, pdf link, doi, journal_ref. Leave LaTeX in abstracts raw — cleaning is a separate
+   exercise.
+  - Output CSV (not parquet) — visibility in Excel/VS Code beats compactness for a teaching artifact.
+
+  Layout:
+  - All code in `sankalp/example/code/`, all outputs in `sankalp/example/output/`. Outputs should be
+  gitignored.
+  - Single-file script (no CLI flags, no config). Hardcoded constants. Readable in one screen.
+  - Add a README at `sankalp/example/` covering what it does, how to run, output schema, and why arXiv is
+  the right choice (vs NBER/SSRN where bulk download violates ToS).
+  - Pinned `requirements.txt`: requests, feedparser, pandas.
+
+  Deliverable: a plan I can approve before you write any code. Include file layout, implementation steps
+  for the script, rationale for design choices (especially CSV-vs-parquet and no-async), end-to-end
+  verification steps, and a list of live-demo extensions to mention in the README but not implement (date
+  filters, cross-category sweeps, author search, sentence-transformers clustering).
+
+  Three pedagogical concepts the script should naturally surface: User-Agent identification, pagination
+  with start/max_results, and rate limiting via time.sleep.
