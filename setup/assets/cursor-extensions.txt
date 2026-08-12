@@ -1,0 +1,15 @@
+# Cursor extensions installed by the workshop setup script.
+# One extension id per line. Lines starting with # are ignored.
+
+# Python: language server, debugging, environment discovery
+ms-python.python
+# Notebooks, which most of the workshop demos use
+ms-toolsai.jupyter
+# R language support: syntax, LSP, and an R terminal
+REditorSupport.r
+# Julia
+julialang.language-julia
+# Quarto, for papers and reproducible reports
+quarto.quarto
+# Ruff: fast Python linting and formatting
+charliermarsh.ruff

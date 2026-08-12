@@ -2,6 +2,8 @@
 .env
 .env.*
 *.env
+# ...but the template, which holds no secrets, must be committed.
+!.env.example
 
 # Python
 __pycache__/

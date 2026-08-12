@@ -33,7 +33,31 @@ Each session folder contains slides and code examples. Video recordings are avai
 
 ## Prerequisites
 
-See individual session folders for setup instructions. Generally: Python 3.10+, API keys for relevant services.
+**Run the setup script before you arrive.** It installs everything the sessions
+need — Python, R, Julia, Cursor, Claude Code, Codex, git, and the rest — asking
+before each one and leaving anything you already have alone. Budget 15–30
+minutes, mostly downloads.
+
+macOS:
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/sankalpsharmaa/usc-econ-ai-workshop/jyl/setup/install.sh)"
+```
+
+Windows (PowerShell, no administrator rights needed):
+
+```powershell
+irm https://raw.githubusercontent.com/sankalpsharmaa/usc-econ-ai-workshop/jyl/setup/install.ps1 | iex
+```
+
+Already set up, or want to check? `setup/bin/doctor.sh` (macOS) or
+`setup\bin\doctor.ps1` (Windows) reports what you have and changes nothing.
+
+See [`setup/README.md`](setup/README.md) for what it installs, how to install
+pieces by hand on a managed laptop, and what to do if something fails. You will
+also need API keys — copy `.env.example` to `.env` and fill it in.
+
+Individual session folders may add their own notes.
 
 ## Contact
 
