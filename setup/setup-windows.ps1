@@ -150,13 +150,24 @@ if ((Have 'julia') -or (Have 'juliaup')) {
 } elseif ($Check) {
     Record 'MISSING' 'Julia' 'would install'
 } elseif (Have 'winget') {
-    & winget install --name Julia --id 9NJNWW8PVKMN -e --source msstore --accept-source-agreements --accept-package-agreements
+    # community repo first: works on machines where the Microsoft Store is blocked
+    Install-WithWinget 'Julialang.Juliaup'
     Update-SessionPath
+    if (-not (Have 'julia')) {
+        Write-Host 'Trying the Microsoft Store version instead...'
+        & winget install --name Julia --id 9NJNWW8PVKMN -e --source msstore --accept-source-agreements --accept-package-agreements
+        Update-SessionPath
+    }
     if (Have 'julia') {
         Record 'INSTALLED' 'Julia' (Get-Command 'julia').Source
+    } elseif (Have 'juliaup') {
+        & juliaup add release
+        Update-SessionPath
+        if (Have 'julia') { Record 'INSTALLED' 'Julia' (Get-Command 'julia').Source }
+        else { Record 'FAILED' 'Julia' 'juliaup installed but julia did not appear, open a new terminal and rerun' }
     } else {
         Record 'MANUAL' 'Julia' 'https://julialang.org/downloads/'
-        Write-Host 'Microsoft Store install did not finish. Download Julia manually from https://julialang.org/downloads/'
+        Write-Host 'Automatic install did not finish. Download Julia from https://julialang.org/downloads/'
     }
 } else {
     Record 'MANUAL' 'Julia' 'https://julialang.org/downloads/'
@@ -270,3 +281,7 @@ Write-Host "  3. Your Python setup: $Venv\Scripts\Activate.ps1"
 Write-Host "  4. Log saved at: $Log"
 
 try { Stop-Transcript | Out-Null } catch { }
+
+# exit 1 if anything actually failed, so CI and the -Check run can be scripted
+$failed = @($Results | Where-Object { $_.Status -eq 'FAILED' })
+if ($failed.Count -gt 0) { exit 1 } else { exit 0 }

@@ -273,3 +273,7 @@ echo "  1. Close this terminal and open a new one."
 echo "  2. Check it worked:  claude --version && uv --version && Rscript --version"
 echo "  3. Your Python setup: source $WORKSHOP_DIR/.venv/bin/activate"
 echo "  4. Log saved at: $LOG"
+
+# exit 1 if anything actually failed, so CI and the --check run can be scripted
+if printf '%s\n' "${RESULTS[@]}" | grep -q '^FAILED|'; then exit 1; fi
+exit 0

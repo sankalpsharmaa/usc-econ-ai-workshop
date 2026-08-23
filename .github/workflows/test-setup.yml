@@ -1,0 +1,81 @@
+# Runs both setup scripts on brand new macOS and Windows machines.
+# Every run starts from a blank VM, so this is the closest thing to a first-year
+# student opening a laptop they have never installed anything on.
+name: test-setup
+
+on:
+  push:
+    paths:
+      - 'setup/**'
+      - '.github/workflows/test-setup.yml'
+  workflow_dispatch:
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dry run, nothing should be installed
+        run: bash setup/setup-mac.sh --check
+
+      - name: Full install
+        run: bash setup/setup-mac.sh --yes
+
+      - name: Run it a second time, should skip everything
+        run: bash setup/setup-mac.sh --yes
+
+      - name: Verify the tools are really there
+        run: |
+          export PATH="$HOME/.local/bin:$HOME/.juliaup/bin:$PATH"
+          set -x
+          claude --version
+          cursor-agent --version
+          codex --version
+          uv --version
+          Rscript --version
+          julia --version
+          "$HOME/econ-ai-workshop/.venv/bin/python" -c "import pandas, pyfixest, statsmodels, polars; print('python ok')"
+          Rscript -e 'stopifnot(requireNamespace("fixest"), requireNamespace("data.table")); cat("R ok\n")'
+
+      - name: Save the log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-log
+          path: ~/econ-ai-workshop/setup-mac.log
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dry run, nothing should be installed
+        run: ./setup/setup-windows.ps1 -Check
+
+      - name: Full install
+        run: ./setup/setup-windows.ps1 -Yes
+
+      - name: Run it a second time, should skip everything
+        run: ./setup/setup-windows.ps1 -Yes
+
+      - name: Verify the tools are really there
+        run: |
+          $machine = [Environment]::GetEnvironmentVariable('Path','Machine')
+          $user    = [Environment]::GetEnvironmentVariable('Path','User')
+          $env:Path = "$machine;$user;$HOME\.local\bin;$env:LOCALAPPDATA\Programs\cursor-agent"
+          claude --version
+          uv --version
+          & "$HOME\econ-ai-workshop\.venv\Scripts\python.exe" -c "import pandas, pyfixest, statsmodels, polars; print('python ok')"
+
+      - name: Save the log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-log
+          path: ~/econ-ai-workshop/setup-windows.log
