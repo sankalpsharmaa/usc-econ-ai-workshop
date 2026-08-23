@@ -169,11 +169,10 @@ Throttle to 8 requests per second and set the `User-Agent` on every call.
 
 ## Verification artifacts
 
-Probe scripts and raw JSON responses:
-- `edgar_probe.py` / `edgar_probe.json` (28 endpoints, status and content-length)
-- `edgar_probe2.py` / `edgar_probe2.json` (record counts, pagination limits, DERA link enumeration)
-- `edgar_probe3.py` / `edgar_probe3.json` (archive scale, response headers, User-Agent gate test)
+Every number above came from a live call. Reproduce the core of it with:
 
-All three sit next to this document in `usc-econ-ai-workshop/fall-2026/`. Rerun any of them with `python3 edgar_probe.py`.
+```bash
+python3 sec_edgar.py probe
+```
 
-The scraper built from this recon is `sec_edgar_scraper.py` in the same folder. It defaults to downloading one small filing.
+That calls 15 endpoints, prints status and size for each, and writes the raw results to `data/probe/probe_results.json`. The scraper built from this recon is `sec_edgar.py` in the same folder; it defaults to downloading one small filing.

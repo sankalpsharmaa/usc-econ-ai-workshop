@@ -3,12 +3,18 @@
 # student opening a laptop they have never installed anything on.
 name: test-setup
 
+# Deliberately NOT on push. Each job boots a blank macOS/Windows VM and installs
+# everything from scratch, which takes ~10-60 minutes. Running that on every
+# commit is a waste. Run it by hand from the Actions tab when the setup scripts
+# change, and once a week to catch a broken upstream installer.
 on:
-  push:
-    paths:
-      - 'setup/**'
-      - '.github/workflows/test-setup.yml'
   workflow_dispatch:
+  schedule:
+    - cron: '17 11 * * 1'   # Mondays, 11:17 UTC
+
+concurrency:
+  group: test-setup
+  cancel-in-progress: true
 
 jobs:
   macos:
