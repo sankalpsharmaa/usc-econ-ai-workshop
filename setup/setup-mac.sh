@@ -37,6 +37,10 @@ echo "Log file: $LOG"
 echo "Workshop folder: $WORKSHOP_DIR"
 [ "$CHECK_ONLY" = 1 ] && echo "MODE: --check, nothing will be installed"
 
+# installers drop binaries in these two places; put them on PATH before any check,
+# otherwise a rerun cannot see what the last run installed and reinstalls it
+export PATH="$HOME/.local/bin:$HOME/.juliaup/bin:$PATH"
+
 RESULTS=()
 have() { command -v "$1" >/dev/null 2>&1; }
 record() { RESULTS+=("$1|$2|$3"); }
@@ -121,9 +125,6 @@ install_if_missing cursor-agent "Cursor CLI"  install_cursor
 install_if_missing codex        "Codex CLI"   install_codex
 install_if_missing uv           "uv"          install_uv
 
-# new installers drop binaries here; make them visible to the rest of this run
-export PATH="$HOME/.local/bin:$PATH"
-
 # ---------------------------------------------------------------------- runtime
 
 banner "R"
@@ -149,8 +150,6 @@ else
   curl -fsSL https://install.julialang.org | sh -s -- --yes \
     && record "INSTALLED" "Julia" "ok" || record "FAILED" "Julia" "see $LOG"
 fi
-export PATH="$HOME/.juliaup/bin:$PATH"
-
 # --------------------------------------------------------------------- packages
 
 REQ="$WORKSHOP_DIR/requirements-workshop.txt"

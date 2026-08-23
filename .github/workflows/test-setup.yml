@@ -68,14 +68,67 @@ jobs:
         run: |
           $machine = [Environment]::GetEnvironmentVariable('Path','Machine')
           $user    = [Environment]::GetEnvironmentVariable('Path','User')
-          $env:Path = "$machine;$user;$HOME\.local\bin;$env:LOCALAPPDATA\Programs\cursor-agent"
+          $env:Path = "$machine;$user;$HOME\.local\bin;$env:LOCALAPPDATA\cursor-agent"
           claude --version
+          cursor-agent --version
+          codex --version
           uv --version
+          Rscript --version
+          julia --version
           & "$HOME\econ-ai-workshop\.venv\Scripts\python.exe" -c "import pandas, pyfixest, statsmodels, polars; print('python ok')"
+          Rscript -e 'stopifnot(requireNamespace("fixest"), requireNamespace("data.table")); cat("R ok\n")'
 
       - name: Save the log
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: windows-log
+          path: ~/econ-ai-workshop/setup-windows.log
+
+  windows-without-r-and-julia:
+    # The Windows runner ships with R and Julia preinstalled, so the job above
+    # never exercises the winget install path. Hide them first and force it.
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Hide the preinstalled R and Julia
+        run: |
+          foreach ($tool in 'julia', 'Rscript') {
+            $cmd = Get-Command $tool -ErrorAction SilentlyContinue
+            if ($cmd) {
+              $root = Split-Path (Split-Path $cmd.Source)
+              Write-Host "Renaming $root"
+              Rename-Item -Path $root -NewName ((Split-Path $root -Leaf) + '-hidden') -ErrorAction Continue
+            }
+          }
+          $r = Join-Path $env:ProgramFiles 'R'
+          if (Test-Path $r) { Rename-Item -Path $r -NewName 'R-hidden' -ErrorAction Continue }
+          $env:Path = ($env:Path -split ';' | Where-Object { $_ -notmatch 'julia|\\R\\' }) -join ';'
+          if (Get-Command julia -ErrorAction SilentlyContinue) { throw 'julia is still visible, the test would prove nothing' }
+          Write-Host 'R and Julia are hidden.'
+
+      - name: Full install
+        run: ./setup/setup-windows.ps1 -Yes
+
+      - name: Verify R and Julia really got installed
+        run: |
+          $machine = [Environment]::GetEnvironmentVariable('Path','Machine')
+          $user    = [Environment]::GetEnvironmentVariable('Path','User')
+          $env:Path = "$machine;$user;$HOME\.local\bin;$HOME\.juliaup\bin"
+          julia --version
+          $rs = Get-ChildItem -Path "$env:ProgramFiles\R" -Filter Rscript.exe -Recurse -ErrorAction SilentlyContinue |
+                Select-Object -First 1
+          if (-not $rs) { throw 'R did not install' }
+          & $rs.FullName --version
+
+      - name: Save the log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-fresh-log
           path: ~/econ-ai-workshop/setup-windows.log
