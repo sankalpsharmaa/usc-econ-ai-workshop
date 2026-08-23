@@ -1,0 +1,6 @@
+\babel@toc {english}{}\relax 
+\beamer@sectionintoc {1}{Mental model}{3}{0}{1}
+\beamer@sectionintoc {2}{Setup, safety, and config}{6}{0}{2}
+\beamer@sectionintoc {3}{Live demos}{8}{0}{3}
+\beamer@sectionintoc {4}{My workflow, in five surfaces}{9}{0}{4}
+\beamer@sectionintoc {5}{Trust and verification}{16}{0}{5}

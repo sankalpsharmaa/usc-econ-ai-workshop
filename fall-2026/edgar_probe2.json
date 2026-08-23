@@ -1,0 +1,509 @@
+{
+ "company_tickers": {
+  "status": 200,
+  "n": 10403,
+  "row0": {
+   "cik_str": 1045810,
+   "ticker": "NVDA",
+   "title": "NVIDIA CORP"
+  }
+ },
+ "company_tickers_exchange": {
+  "status": 200,
+  "fields": [
+   "cik",
+   "name",
+   "ticker",
+   "exchange"
+  ],
+  "n": 10403
+ },
+ "submissions": {
+  "status": 200,
+  "top_keys": [
+   "cik",
+   "entityType",
+   "sic",
+   "sicDescription",
+   "ownerOrg",
+   "insiderTransactionForOwnerExists",
+   "insiderTransactionForIssuerExists",
+   "name",
+   "tickers",
+   "exchanges",
+   "ein",
+   "lei",
+   "description",
+   "website",
+   "investorWebsite",
+   "category",
+   "fiscalYearEnd",
+   "stateOfIncorporation",
+   "stateOfIncorporationDescription",
+   "addresses",
+   "phone",
+   "flags",
+   "formerNames",
+   "filings"
+  ],
+  "recent_fields": [
+   "accessionNumber",
+   "filingDate",
+   "reportDate",
+   "acceptanceDateTime",
+   "act",
+   "form",
+   "fileNumber",
+   "filmNumber",
+   "items",
+   "core_type",
+   "size",
+   "isXBRL",
+   "isInlineXBRL",
+   "isXBRLNumeric",
+   "primaryDocument",
+   "primaryDocDescription"
+  ],
+  "recent_n": 1001,
+  "older_shards": [
+   {
+    "name": "CIK0000320193-submissions-001.json",
+    "filingCount": 1240,
+    "filingFrom": "1994-01-26",
+    "filingTo": "2015-06-02"
+   }
+  ],
+  "tickers": [
+   "AAPL"
+  ],
+  "sic": "3571",
+  "sicDescription": "Electronic Computers"
+ },
+ "companyfacts": {
+  "status": 200,
+  "bytes": 3789099,
+  "taxonomies": {
+   "dei": 2,
+   "us-gaap": 503
+  }
+ },
+ "frames": {
+  "status": 200,
+  "n_companies": 6289,
+  "keys": [
+   "taxonomy",
+   "tag",
+   "ccp",
+   "uom",
+   "label",
+   "description",
+   "pts",
+   "data"
+  ],
+  "row0": {
+   "accn": "0001104659-23-035153",
+   "cik": 1750,
+   "entityName": "AAR CORP",
+   "loc": "US-IL",
+   "end": "2023-02-28",
+   "val": 1673300000
+  }
+ },
+ "fts_basic": {
+  "status": 200,
+  "total": {
+   "value": 10000,
+   "relation": "gte"
+  },
+  "returned": 100,
+  "agg_keys": [
+   "entity_filter",
+   "sic_filter",
+   "biz_states_filter",
+   "form_filter"
+  ]
+ },
+ "fts_forms_dates": {
+  "status": 200,
+  "total": {
+   "value": 278,
+   "relation": "eq"
+  },
+  "returned": 100,
+  "agg_keys": [
+   "entity_filter",
+   "sic_filter",
+   "biz_states_filter",
+   "form_filter"
+  ]
+ },
+ "fts_from_9990": {
+  "status": 200,
+  "err": "{\"errorType\":\"ResponseError\",\"errorMessage\":\"search_phase_execution_exception: [illegal_argument_exception] Reason: Result window is too large, from + size must be less than or equal to: [10000] but w"
+ },
+ "fts_from_10000": {
+  "status": 200,
+  "err": "{\"errorType\":\"ResponseError\",\"errorMessage\":\"search_phase_execution_exception: [illegal_argument_exception] Reason: Result window is too large, from + size must be less than or equal to: [10000] but w"
+ },
+ "fts_hit_shape": {
+  "_index": "edgar_file",
+  "_id": "0000035527-22-000119:fitbannualreport202110-k.pdf",
+  "_score": 9.44342,
+  "_source": {
+   "ciks": [
+    "0000035527"
+   ],
+   "period_ending": "2021-12-31",
+   "file_num": [
+    "001-33653"
+   ],
+   "display_names": [
+    "FIFTH THIRD BANCORP  (FITB, FITBI, FITBO, FITBP)  (CIK 0000035527)"
+   ],
+   "xsl": null,
+   "sequence": 31,
+   "root_forms": [
+    "10-K"
+   ],
+   "file_date": "2022-02-25",
+   "biz_states": [
+    "OH"
+   ],
+   "sics": [
+    "6022"
+   ],
+   "form": "10-K",
+   "adsh": "0000035527-22-000119",
+   "film_num": [
+    "22680326"
+   ],
+   "biz_locations": [
+    "Cincinnati, OH"
+   ],
+   "file_type": "10-K",
+   "file_description": "10-K",
+   "inc_states": [
+    "OH"
+   ],
+   "items": []
+  }
+ },
+ "full_index_years": [
+  "1993",
+  "1994",
+  "1995",
+  "1996",
+  "1997",
+  "1998",
+  "1999",
+  "2000",
+  "2001",
+  "2002",
+  "2003",
+  "2004",
+  "2005",
+  "2006",
+  "2007",
+  "2008",
+  "2009",
+  "2010",
+  "2011",
+  "2012",
+  "2013",
+  "2014",
+  "2015",
+  "2016",
+  "2017",
+  "2018",
+  "2019",
+  "2020",
+  "2021",
+  "2022",
+  "2023",
+  "2024",
+  "2025",
+  "2026",
+  "company.Z",
+  "company.gz",
+  "company.idx",
+  "company.zip",
+  "crawler.idx",
+  "form.Z",
+  "form.gz",
+  "form.idx",
+  "form.zip",
+  "index.htm",
+  "master.Z",
+  "master.gz",
+  "master.idx",
+  "master.zip",
+  "sitemap.quarterlyindexes.xml",
+  "xbrl.Z",
+  "xbrl.gz",
+  "xbrl.idx",
+  "xbrl.zip"
+ ],
+ "full_index_2024Q1_files": [
+  [
+   "company.gz",
+   "4896 KB"
+  ],
+  [
+   "company.idx",
+   "54074 KB"
+  ],
+  [
+   "company.Z",
+   "8971 KB"
+  ],
+  [
+   "company.zip",
+   "4452 KB"
+  ],
+  [
+   "crawler.idx",
+   "66249 KB"
+  ],
+  [
+   "form.gz",
+   "5457 KB"
+  ],
+  [
+   "form.idx",
+   "54074 KB"
+  ],
+  [
+   "form.Z",
+   "8963 KB"
+  ],
+  [
+   "form.zip",
+   "5049 KB"
+  ],
+  [
+   "master.gz",
+   "4336 KB"
+  ],
+  [
+   "master.idx",
+   "32097 KB"
+  ],
+  [
+   "master.Z",
+   "7916 KB"
+  ],
+  [
+   "master.zip",
+   "4114 KB"
+  ],
+  [
+   "sitemap.quarterlyindex1.xml",
+   "6407 KB"
+  ],
+  [
+   "sitemap.quarterlyindex10.xml",
+   "6408 KB"
+  ],
+  [
+   "sitemap.quarterlyindex11.xml",
+   "6408 KB"
+  ],
+  [
+   "sitemap.quarterlyindex12.xml",
+   "6405 KB"
+  ],
+  [
+   "sitemap.quarterlyindex13.xml",
+   "2261 KB"
+  ],
+  [
+   "sitemap.quarterlyindex2.xml",
+   "6407 KB"
+  ],
+  [
+   "sitemap.quarterlyindex3.xml",
+   "6406 KB"
+  ],
+  [
+   "sitemap.quarterlyindex4.xml",
+   "6404 KB"
+  ],
+  [
+   "sitemap.quarterlyindex5.xml",
+   "6406 KB"
+  ],
+  [
+   "sitemap.quarterlyindex6.xml",
+   "6407 KB"
+  ],
+  [
+   "sitemap.quarterlyindex7.xml",
+   "6406 KB"
+  ],
+  [
+   "sitemap.quarterlyindex8.xml",
+   "6405 KB"
+  ],
+  [
+   "sitemap.quarterlyindex9.xml",
+   "6405 KB"
+  ],
+  [
+   "xbrl.gz",
+   "372 KB"
+  ],
+  [
+   "xbrl.idx",
+   "2322 KB"
+  ],
+  [
+   "xbrl.Z",
+   "647 KB"
+  ],
+  [
+   "xbrl.zip",
+   "364 KB"
+  ]
+ ],
+ "daily_index_2024Q1": {
+  "n": 310,
+  "first": [
+   {
+    "last-modified": "01/02/2024 10:05:51 PM",
+    "name": "company.20240102.idx",
+    "type": "file",
+    "href": "company.20240102.idx",
+    "size": "816 KB"
+   },
+   {
+    "last-modified": "01/03/2024 10:06:02 PM",
+    "name": "company.20240103.idx",
+    "type": "file",
+    "href": "company.20240103.idx",
+    "size": "1242 KB"
+   },
+   {
+    "last-modified": "01/04/2024 10:06:21 PM",
+    "name": "company.20240104.idx",
+    "type": "file",
+    "href": "company.20240104.idx",
+    "size": "1016 KB"
+   }
+  ],
+  "last": [
+   {
+    "last-modified": "03/27/2024 10:08:44 PM",
+    "name": "sitemap.20240327.xml",
+    "type": "file",
+    "href": "sitemap.20240327.xml",
+    "size": "1352 KB"
+   },
+   {
+    "last-modified": "03/28/2024 10:10:38 PM",
+    "name": "sitemap.20240328.xml",
+    "type": "file",
+    "href": "sitemap.20240328.xml",
+    "size": "1647 KB"
+   },
+   {
+    "last-modified": "03/29/2024 10:06:58 PM",
+    "name": "sitemap.20240329.xml",
+    "type": "file",
+    "href": "sitemap.20240329.xml",
+    "size": "955 KB"
+   }
+  ]
+ },
+ "master_idx_2024Q1": {
+  "bytes": 33207145,
+  "lines": 370322,
+  "header": [
+   "Description:           Master Index of EDGAR Dissemination Feed",
+   "Last Data Received:    March 31, 2024",
+   "Comments:              webmaster@sec.gov",
+   "Anonymous FTP:         ftp://ftp.sec.gov/edgar/",
+   "Cloud HTTP:            https://www.sec.gov/Archives/",
+   "",
+   "",
+   "",
+   "",
+   "CIK|Company Name|Form Type|Date Filed|Filename",
+   "--------------------------------------------------------------------------------",
+   "1000045|NICHOLAS FINANCIAL INC|10-Q|2024-02-13|edgar/data/1000045/0000950170-24-014566.txt"
+  ],
+  "row": "1000045|NICHOLAS FINANCIAL INC|424B3|2024-03-19|edgar/data/1000045/0000950170-24-033226.txt"
+ },
+ "dera_finstmt": {
+  "status": 200,
+  "n_links": 69,
+  "sample": [
+   "/files/dera/data/financial-statement-data-sets/2009q1.zip",
+   "/files/dera/data/financial-statement-data-sets/2009q2.zip",
+   "/files/dera/data/financial-statement-data-sets/2009q3.zip",
+   "/files/dera/data/financial-statement-data-sets/2009q4.zip",
+   "/files/dera/data/financial-statement-data-sets/2010q1.zip",
+   "/files/dera/data/financial-statement-data-sets/2010q2.zip"
+  ]
+ },
+ "dera_notes": {
+  "status": 200,
+  "n_links": 79,
+  "sample": [
+   "/files/dera/data/financial-statement-notes-data-sets/2009q1_notes.zip",
+   "/files/dera/data/financial-statement-notes-data-sets/2009q2_notes.zip",
+   "/files/dera/data/financial-statement-notes-data-sets/2009q3_notes.zip",
+   "/files/dera/data/financial-statement-notes-data-sets/2009q4_notes.zip",
+   "/files/dera/data/financial-statement-notes-data-sets/2010q1_notes_1.zip",
+   "/files/dera/data/financial-statement-notes-data-sets/2010q2_notes_0.zip"
+  ]
+ },
+ "dera_13f": {
+  "status": 200,
+  "n_links": 53,
+  "sample": [
+   "/files/structureddata/data/form-13f-data-sets/01dec2024-28feb2025_form13f.zip",
+   "/files/structureddata/data/form-13f-data-sets/01dec2025-28feb2026_form13f.zip",
+   "/files/structureddata/data/form-13f-data-sets/01jan2024-29feb2024_form13f.zip",
+   "/files/structureddata/data/form-13f-data-sets/01jun2024-31aug2024_form13f.zip",
+   "/files/structureddata/data/form-13f-data-sets/01jun2025-31aug2025_form13f.zip",
+   "/files/structureddata/data/form-13f-data-sets/01mar2024-31may2024_form13f.zip"
+  ]
+ },
+ "dera_nport": {
+  "status": 200,
+  "n_links": 27,
+  "sample": [
+   "/files/dera/data/form-n-port-data-sets/2019q4_nport.zip",
+   "/files/dera/data/form-n-port-data-sets/2020q1_nport.zip",
+   "/files/dera/data/form-n-port-data-sets/2020q2_nport.zip",
+   "/files/dera/data/form-n-port-data-sets/2020q3_nport.zip",
+   "/files/dera/data/form-n-port-data-sets/2020q4_nport.zip",
+   "/files/dera/data/form-n-port-data-sets/2021q1_nport.zip"
+  ]
+ },
+ "dera_insider": {
+  "status": 200,
+  "n_links": 82,
+  "sample": [
+   "/files/datastandardsinnovation/data/insider-transactions-data-sets/2026q2_form345.zip",
+   "/files/structureddata/data/insider-transactions-data-sets/2006q1_form345.zip",
+   "/files/structureddata/data/insider-transactions-data-sets/2006q2_form345.zip",
+   "/files/structureddata/data/insider-transactions-data-sets/2006q3_form345.zip",
+   "/files/structureddata/data/insider-transactions-data-sets/2006q4_form345.zip",
+   "/files/structureddata/data/insider-transactions-data-sets/2007q1_form345.zip"
+  ]
+ },
+ "dera_mfrr": {
+  "status": 404
+ },
+ "dera_logs": {
+  "status": 200,
+  "n_links": 0,
+  "sample": []
+ },
+ "dera_index": {
+  "status": 200,
+  "n_links": 0,
+  "sample": []
+ }
+}

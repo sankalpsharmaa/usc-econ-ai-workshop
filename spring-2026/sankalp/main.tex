@@ -1,0 +1,808 @@
+\documentclass[9pt,aspectratio=169]{beamer}
+
+% Encoding, fonts, micro-typography
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% Language and math
+\usepackage[english]{babel}
+\usepackage{amsmath, amssymb, amsfonts, bm}
+
+% Figures and tables
+\usepackage{graphicx}
+\graphicspath{{figures/}{../output/}}
+\usepackage{booktabs}
+\usepackage{adjustbox}
+\usepackage{array}
+
+% Additional packages
+\usepackage{appendixnumberbeamer}
+\usepackage{tikz}
+\usetikzlibrary{shadings,calc,positioning}
+\usepackage{listings}
+\usepackage{fontawesome5}
+\usepackage{qrcode}
+
+% Colors, links, and themes
+\usepackage{xcolor}
+\definecolor{bhblue}{RGB}{26,84,162}
+\definecolor{bhgray}{RGB}{80,80,80}
+\definecolor{codebg}{HTML}{F5F5F5}
+\definecolor{accent}{HTML}{0B5394}
+% Title-slide palette
+\definecolor{ccbgdeep}{HTML}{0B0E14}
+\definecolor{ccbgmid}{HTML}{121826}
+\definecolor{ccaccent}{HTML}{D4A574}
+\definecolor{ccgrid}{HTML}{3D4F6F}
+\definecolor{cctitleink}{HTML}{0D1117}   % near-black ink background
+\definecolor{ccwarm}{HTML}{D97757}        % coral accent (Anthropic-adjacent)
+\definecolor{ccmuted}{HTML}{8094B4}       % muted blue-gray for secondary text
+\usetheme{Madrid}
+\usecolortheme{seahorse}
+\setbeamercolor{title}{fg=bhblue}
+\setbeamercolor{frametitle}{fg=bhblue}
+\setbeamercolor{block title}{bg=bhblue,fg=white}
+\hypersetup{colorlinks=true, linkcolor=bhblue, urlcolor=bhblue}
+
+% Typography and layout tweaks
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}{}
+\setbeamertemplate{page number in head/foot}{}
+\setbeamersize{text margin left=1cm,text margin right=1cm}
+\setlength{\parskip}{0.25em}
+\setbeamerfont{frametitle}{size=\large}
+
+% Code listing styles
+\lstdefinestyle{shell}{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  framesep=4pt,
+  rulecolor=\color{lightgray},
+  breaklines=true,
+  showstringspaces=false,
+  language=bash,
+  keywordstyle=\color{bhblue}\bfseries,
+  commentstyle=\color{gray}\itshape,
+  morekeywords={claude,gh,git,Read,Edit,Bash,reghdfe,esttab,Rscript,fixest,feols,csdid,mcp,plan,init,clear,compact,usage}
+}
+
+\lstdefinestyle{json}{
+  basicstyle=\ttfamily\footnotesize,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  framesep=3pt,
+  rulecolor=\color{lightgray},
+  breaklines=true,
+  showstringspaces=false
+}
+
+% Handy macros
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+
+% Appendix navigation: floating button in bottom-right of each frame
+\newcommand{\appbtn}[2]{%
+  \begin{tikzpicture}[remember picture, overlay]
+    \node[anchor=south east, inner sep=0pt]
+      at ([xshift=-0.6cm, yshift=0.45cm]current page.south east)
+      {\hyperlink{app:#1}{\beamergotobutton{\scriptsize #2}}};
+  \end{tikzpicture}%
+}
+\newcommand{\backbtn}[2]{%
+  \begin{tikzpicture}[remember picture, overlay]
+    \node[anchor=south east, inner sep=0pt]
+      at ([xshift=-0.6cm, yshift=0.45cm]current page.south east)
+      {\hyperlink{main:#1}{\beamerreturnbutton{\scriptsize #2}}};
+  \end{tikzpicture}%
+}
+
+\newcommand{\ClaudeCodeTitleBackground}{%
+  \begin{tikzpicture}[remember picture,overlay]
+    % 1. Solid near-black background
+    \fill[cctitleink]
+      (current page.south west) rectangle (current page.north east);
+    % 2. Warm ambient glow — right side, behind sparkle
+    \shade[inner color=ccwarm!28!cctitleink, outer color=cctitleink]
+      ($(current page.east)+(-3.0cm,0)$) circle [radius=0.32\paperwidth];
+    % 3. Cool blue bloom — upper-left quadrant
+    \shade[inner color=bhblue!25!cctitleink, outer color=cctitleink]
+      ($(current page.north west)+(2.8cm,-2.0cm)$) circle [radius=0.20\paperwidth];
+    % 4. Official Claude logo (Anthropic asset, coral #D97757)
+    \node[anchor=center, inner sep=0pt]
+      at ($(current page.east)+(-3.2cm,0.3cm)$)
+      {\includegraphics[height=4.6cm]{figures/claude-logo.pdf}};
+    % 5. Thin coral accent line at top edge
+    \fill[ccwarm]
+      (current page.north west) rectangle
+      ($(current page.north east)+(0,-2.5pt)$);
+  \end{tikzpicture}%
+}
+
+\title[Claude Code for Econ PhDs]{\textbf{Agentic Coding with Claude Code}\\}
+\author[Sankalp Sharma]{Sankalp Sharma}
+\institute{University of Southern California}
+\date{April 27, 2026}
+
+\begin{document}
+
+\begingroup
+  \usebackgroundtemplate{\ClaudeCodeTitleBackground}
+  \setbeamertemplate{headline}{}
+  \setbeamertemplate{footline}{}
+  \setbeamertemplate{title page}{%
+    \begin{tikzpicture}[remember picture,overlay]
+      % Thin coral left accent bar flanking both title lines
+      \fill[ccwarm]
+        ($(current page.north west)+(0.68cm,-1.42cm)$) rectangle
+        ($(current page.north west)+(0.78cm,-3.88cm)$);
+      % "Agentic Coding" — large, white, bold
+      \node[anchor=north west, inner sep=0pt,
+        text=white,
+        font=\fontsize{30}{34}\selectfont\bfseries]
+        at ($(current page.north west)+(1.15cm,-1.60cm)$)
+        {Agentic Coding};
+      % "with Claude Code" — smaller, coral accent
+      \node[anchor=north west, inner sep=0pt,
+        text=ccwarm,
+        font=\fontsize{20}{24}\selectfont\bfseries]
+        at ($(current page.north west)+(1.15cm,-3.10cm)$)
+        {with Claude Code};
+      % Thin horizontal rule separating title from meta
+      \draw[ccmuted!60, line width=0.45pt]
+        ($(current page.north west)+(1.15cm,-4.88cm)$) --
+        ($(current page.north west)+(7.80cm,-4.88cm)$);
+      % Author name
+      \node[anchor=north west, inner sep=0pt,
+        text=white,
+        font=\fontsize{11}{14}\selectfont\bfseries]
+        at ($(current page.north west)+(1.15cm,-5.28cm)$)
+        {Sankalp Sharma};
+      % Institute and date
+      \node[anchor=north west, inner sep=0pt,
+        text=ccmuted,
+        font=\fontsize{9}{11}\selectfont]
+        at ($(current page.north west)+(1.15cm,-6.10cm)$)
+        {University of Southern California \textbullet\ April 27, 2026};
+    \end{tikzpicture}%
+  }
+  \begin{frame}[plain]
+    \titlepage
+  \end{frame}
+\endgroup
+\usebackgroundtemplate{}
+
+% ============================================================
+% GOALS (1 minute, immediately after title)
+% ============================================================
+\begin{frame}{High-Level Goals}
+
+  \begin{itemize}
+    \item \textbf{Reducing startup costs for leveraging agentic coding tools}
+    \item \textbf{Prompt Engineering}
+    \item \textbf{Using agents effectively}: when to spawn one, when not to, what to ask.
+    \item \textbf{Using the built-in features effectively}: plan mode, memory, hooks, skills, worktrees and so on
+  \end{itemize}
+
+\end{frame}
+
+% ============================================================
+% MENTAL MODEL (3 minutes)
+% ============================================================
+\section{Mental model}
+
+\begin{frame}{Three categories of AI coding tools}
+  \vspace{0.15cm}
+
+  % Muted block colors for Chat and IDE; warm highlight for Agent
+  \setbeamercolor{chat block title}{fg=white, bg=bhgray}
+  \setbeamercolor{chat block body}{fg=bhgray!20!black, bg=bhgray!15}
+  \setbeamercolor{agent block title}{fg=white, bg=ccwarm}
+  \setbeamercolor{agent block body}{fg=black, bg=ccwarm!15}
+
+  \begin{columns}[T, onlytextwidth]
+    % ---- Chat ----
+    \column{0.31\textwidth}
+    \setbeamercolor{block title}{fg=white, bg=bhgray}
+    \setbeamercolor{block body}{fg=bhgray!20!black, bg=bhgray!12}
+    \begin{block}{\faComments\enspace Chat}
+      \footnotesize\textit{Claude.ai, ChatGPT}
+      \vspace{0.25em}
+      \begin{itemize}\setlength\itemsep{0.2em}
+        \item You paste, it answers.
+        \item No file access.
+        \item Stateless.
+      \end{itemize}
+    \end{block}
+
+    % ---- IDE assistant ----
+    \column{0.31\textwidth}
+    \setbeamercolor{block title}{fg=white, bg=bhgray}
+    \setbeamercolor{block body}{fg=bhgray!20!black, bg=bhgray!12}
+    \begin{block}{\faCode\enspace IDE assistant}
+      \footnotesize\textit{Cursor, Copilot}
+      \vspace{0.25em}
+      \begin{itemize}\setlength\itemsep{0.2em}
+        \item Autocompletes as you type.
+        \item Lives inside the editor.
+        \item Line-level.
+      \end{itemize}
+    \end{block}
+
+    % ---- Agent (punchline) ----
+    \column{0.31\textwidth}
+    \setbeamercolor{block title}{fg=white, bg=ccwarm}
+    \setbeamercolor{block body}{fg=black, bg=ccwarm!12}
+    \begin{block}{\faRobot\enspace Agentic}
+      \footnotesize\textbf{Claude Code, Codex}
+      \vspace{0.25em}
+      \begin{itemize}\setlength\itemsep{0.2em}
+        \item Reads files, plans, edits, runs, iterates.
+        \item Runs in your terminal.
+        \item Goal-level.
+      \end{itemize}
+    \end{block}
+  \end{columns}
+
+  \vspace{0.5cm}
+  \begin{center}
+    \begin{tikzpicture}
+      \node[
+        draw=ccwarm, line width=0.6pt, rounded corners=4pt,
+        fill=ccwarm!6, inner sep=10pt,
+        text width=0.78\textwidth, align=center
+      ] (quotebox) {%
+        {\color{ccwarm}\Large\textbf{\guillemotleft}}\;%
+        \itshape Claude Code is a Unix utility, not an IDE.\;%
+        {\color{ccwarm}\Large\textbf{\guillemotright}}\\[3pt]
+        {\footnotesize\color{bhgray} Boris Cherny, Anthropic}%
+      };
+    \end{tikzpicture}
+  \end{center}
+\end{frame}
+
+\begin{frame}{The agentic loop}
+  \hypertarget{main:loop}{}
+  \appbtn{hallucinations}{hallucinations}
+
+  \begin{center}
+    \begin{tikzpicture}[
+      stage/.style={
+        draw=bhblue, line width=0.7pt, rounded corners=4pt,
+        fill=bhblue!8, minimum height=1.0cm, minimum width=1.9cm,
+        font=\small\bfseries, text=bhblue
+      },
+      verifystage/.style={
+        draw=ccwarm, line width=1pt, rounded corners=4pt,
+        fill=ccwarm!12, minimum height=1.0cm, minimum width=1.9cm,
+        font=\small\bfseries, text=ccwarm
+      },
+      flow/.style={->, line width=1pt, color=bhblue!70, >=stealth},
+      loopback/.style={->, line width=1pt, color=ccwarm, >=stealth, dashed},
+      iconlbl/.style={font=\scriptsize\itshape, color=bhgray}
+    ]
+      \node[stage] (explore) {explore};
+      \node[stage, right=0.55cm of explore] (plan) {plan};
+      \node[stage, right=0.55cm of plan] (edit) {edit};
+      \node[stage, right=0.55cm of edit] (run) {run};
+      \node[verifystage, right=0.55cm of run] (verify) {verify};
+
+      \node[iconlbl, above=0.05cm of explore] {\faSearch};
+      \node[iconlbl, above=0.05cm of plan]    {\faList};
+      \node[iconlbl, above=0.05cm of edit]    {\faPen};
+      \node[iconlbl, above=0.05cm of run]     {\faPlay};
+      \node[iconlbl, above=0.05cm of verify]  {\faCheckCircle};
+
+      \draw[flow] (explore) -- (plan);
+      \draw[flow] (plan)    -- (edit);
+      \draw[flow] (edit)    -- (run);
+      \draw[flow] (run)     -- (verify);
+      \draw[loopback] (verify.south) .. controls +(0,-1.1) and +(0,-1.1) .. (explore.south)
+        node[midway, below, font=\scriptsize\itshape, color=ccwarm] {observe, decide, repeat};
+    \end{tikzpicture}
+  \end{center}
+
+  \vspace{0.4cm}
+  \begin{itemize}
+    \setlength\itemsep{0.45em}
+    \item \textbf{Closed feedback.} Each tool call returns a result (a file, an error, a test failure) and that result becomes the next prompt
+    \item \textbf{Goal-level, not step-level.} You say \textit{``make the tests pass.''} The model picks the steps. 
+    \item \textbf{Stops at the goal, not at the script.} The loop ends when the model decides the goal is met.
+  \end{itemize}
+\end{frame}
+
+% ============================================================
+% WHY ECONOMISTS SHOULD CARE (1 minute)
+% ============================================================
+\begin{frame}{Why economists should care}
+  \hypertarget{main:care}{}
+  \appbtn{aea}{AEA compliance}
+  \vspace{0.2cm}
+  \begin{center}
+    {\small\color{bhgray}\itshape An empirical paper is a chain of expensive steps}
+  \end{center}
+  \vspace{0.35cm}
+
+  \renewcommand{\arraystretch}{1.45}
+  \begin{center}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.46\textwidth}
+                    @{\hspace{0.6cm}}r
+                    @{\hspace{0.25cm}}c@{\hspace{0.25cm}}l@{}}
+    \toprule
+    {\color{bhblue}\bfseries Step}
+      & {\color{bhgray}\bfseries Before}
+      &
+      & {\color{ccwarm}\bfseries With Claude Code} \\
+    \midrule
+    Clean a new admin dataset
+      & {\color{bhgray} 2--5 RA-days}
+      & {\color{ccwarm}$\rightarrow$}
+      & {\color{ccwarm}\bfseries a session} \\
+    Port \texttt{xtreg} to \texttt{reghdfe} 
+      & {\color{bhgray} half a day}
+      & {\color{ccwarm}$\rightarrow$}
+      & {\color{ccwarm}\bfseries 10 minutes} \\
+    Build a publication-quality table
+      & {\color{bhgray} 1--2 hours}
+      & {\color{ccwarm}$\rightarrow$}
+      & {\color{ccwarm}\bfseries 5 minutes} \\
+    Replicate someone else's paper
+      & {\color{bhgray} a week}
+      & {\color{ccwarm}$\rightarrow$}
+      & {\color{ccwarm}\bfseries an evening} \\
+    Running hundreds of specifications
+      & {\color{bhgray} a weekend}
+      & {\color{ccwarm}$\rightarrow$}
+      & {\color{ccwarm}\bfseries 30 mins} \\
+    First-pass referee report on your own draft
+      & {\color{bhgray}\itshape ??}
+      & {\color{ccwarm}$\rightarrow$}
+      & {\color{ccwarm}\bfseries free} \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+\end{frame}
+
+
+% ============================================================
+% SETUP + SAFETY (2 minutes)
+% ============================================================
+\section{Setup, safety, and config}
+
+\begin{frame}[fragile]{Installation}
+  \begin{columns}[T, onlytextwidth]
+    \column{0.56\textwidth}
+    {\footnotesize\color{bhgray}\itshape macOS, Linux, or WSL}
+    \begin{lstlisting}[style=shell]
+curl -fsSL https://claude.ai/install.sh | bash
+
+# verify
+claude --version
+claude doctor
+
+# launch
+cd ~/my-project
+claude
+    \end{lstlisting}
+
+    \column{0.40\textwidth}
+    \setbeamercolor{block title}{fg=white, bg=ccwarm}
+    \setbeamercolor{block body}{fg=black, bg=ccwarm!10}
+    \begin{block}{\faLightbulb\enspace No paid plan?}
+      \footnotesize
+      Codex or the Cursor agent window work fine.
+      \vspace{0.4em}
+      \begin{itemize}\setlength\itemsep{0.35em}
+        \item Cursor is \textbf{free for students}.
+        \item USC IT can grant access to \textbf{ChatGPT thinking mode + Codex} 
+      \end{itemize}
+    \end{block}
+  \end{columns}
+
+  \vspace{0.15cm}
+  \begin{center}
+    {\footnotesize\color{bhgray}\itshape Before you paste anything, what is safe to send?}
+  \end{center}
+
+  \renewcommand{\arraystretch}{1.05}
+  \scriptsize
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.46\textwidth}
+                    @{\hspace{0.4cm}}>{\raggedright\arraybackslash}p{0.46\textwidth}@{}}
+    \toprule
+    {\color{bhblue}\bfseries\faCheckCircle\enspace Fine to send} &
+    {\color{ccwarm}\bfseries\faTimesCircle\enspace Do not send} \\
+    \midrule
+    {\color{bhblue!80!black}\faCheck}\enspace Public data (Census, BLS, IPUMS)
+      & {\color{ccwarm}\faTimes}\enspace IRB-restricted human-subjects data \\
+    {\color{bhblue!80!black}\faCheck}\enspace Synthetic and anonymized panels
+      & {\color{ccwarm}\faTimes}\enspace Title 13 / 26 (FSRDC, IRS) \\
+    {\color{bhblue!80!black}\faCheck}\enspace Data schema
+      & {\color{ccwarm}\faTimes}\enspace Medical data \\
+    {\color{bhblue!80!black}\faCheck}\enspace Your code, drafts, slides
+      & {\color{ccwarm}\faTimes}\enspace PII microdata \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}[fragile]{Before you Claude, get on git}
+  \hypertarget{main:git}{}
+  \appbtn{worktrees}{git worktrees}
+  \vspace{0.2cm}
+  Version control is essential!
+  \vspace{0.2cm}
+  \begin{lstlisting}[style=shell]
+git init && gh repo create my-paper --private --source=.
+echo "data/raw/"     >> .gitignore   # never commit raw data
+echo "*.dta *.parquet *.log" >> .gitignore
+echo ".env"          >> .gitignore   # never commit secrets
+git add code/ paper/ CLAUDE.md && git commit -m "init"
+  \end{lstlisting}
+  \vspace{0.3cm}
+  \textbf{Three habits that matter once Claude is editing your files:}
+  \begin{itemize}
+    \setlength\itemsep{0.3em}
+    \item \textbf{One spec, one branch.} \texttt{git checkout -b feat/event-study}. Bad runs throw away cleanly.
+    \item \textbf{\texttt{git diff} before approving.} 
+    \item \textbf{Worktrees for parallel sessions.} \texttt{git worktree add ../paper-did feat/did}, then \texttt{cd} in and run \texttt{claude}. Three Claudes, three modules
+  \end{itemize}
+  \vspace{0.2cm}
+\end{frame}
+
+% ============================================================
+% LIVE DEMOS (10 minutes)
+% ============================================================
+\section{Live demos}
+
+\begin{frame}[fragile]{Demo: arXiv econ.GN}
+  \vspace{0.2cm}
+  One small project, end-to-end
+
+  \vspace{0.5cm}
+  \begin{tabular}{p{0.15\textwidth} p{0.77\textwidth}}
+    \toprule
+    \textbf{Stage} & \textbf{What it covers}\\
+    \midrule
+    Scope    & ToS check, plan-mode draft you approve before code runs.\\
+    Scrape   & Paginated API, 3s rate limit, retries. 6{,}000 papers in $\sim$2 min.\\
+    Clean    & LaTeX in abstracts, date parsing, cross-list explosion.\\
+    Explore  & Submissions over time, category shares, Content analysis.\\
+    Write    & Tables and figures piped into the deck.\\
+    \bottomrule
+  \end{tabular}
+  \vspace{0.3cm}
+
+  \footnotesize Code: \texttt{sankalp/example/code/}. Outputs: \texttt{sankalp/example/output/}.
+\end{frame}
+
+
+% ============================================================
+% MY WORKFLOW (5 minutes)
+% ============================================================
+\section{My workflow, in five surfaces}
+
+\begin{frame}[fragile]{The five surfaces every config touches}
+  \begin{tabular}{p{0.20\textwidth} p{0.72\textwidth}}
+    \toprule
+    \textbf{Surface} & \textbf{What it does}\\
+    \midrule
+    \texttt{CLAUDE.md} & Project memory. Conventions, file layout, what to never do.\\
+    \texttt{settings.json} & Model, allow/deny rules, env vars, hook registration.\\
+    \texttt{.claude/agents/} & Subagents with separate context, custom system prompt.\\
+    \texttt{.claude/skills/} & Reusable workflows triggered by paths or arguments.\\
+    \texttt{.claude/hooks/} & Deterministic shell commands at lifecycle events.\\
+    \bottomrule
+  \end{tabular}
+  \vspace{0.3cm}
+
+\end{frame}
+
+
+\begin{frame}[fragile]{\texttt{CLAUDE.md} }
+  \hypertarget{main:claudemd}{}
+  \appbtn{path-rules}{path-scoped rules}
+  \vspace{0.2cm}
+  \texttt{CLAUDE.md} loads on every session. It is the single highest-leverage file in your project.
+  \begin{lstlisting}[style=shell]
+# CLAUDE.md (project root)
+## Project: 1-line topic. Stack. Master entry point.
+## Conventions: FE engine = reghdfe / fixest / pyfixest.
+                Cluster SE level = district. Seed = 20260415.
+                Tables = booktabs + esttab/modelsummary.
+## Forbidden: pdflatex (use xelatex). pandas for >5GB.
+              Plain TWFE for staggered designs.
+## Replication: make all reproduces every table from data/raw/.
+  \end{lstlisting}
+  \vspace{0.2cm}
+  \textbf{Two-tier setup:}
+  \begin{itemize}
+    \setlength\itemsep{0.25em}
+    \item \texttt{\textasciitilde/.claude/CLAUDE.md} (you, all projects): writing voice, banned phrases, default models.
+    \item \texttt{./CLAUDE.md} (project, committed): conventions, file layout, what never to touch.
+  \end{itemize}
+  \vspace{0.1cm}
+  \footnotesize Test for every line: \emph{``Would removing this cause Claude to make a mistake?''} If not, cut.
+\end{frame}
+
+\begin{frame}[fragile]{Custom commands: \texttt{/prompt} turns dictation into a real prompt}
+  \vspace{0.2cm}
+  A command lives at \texttt{\textasciitilde/.claude/commands/prompt.md}. The command body is itself a prompt that runs when you type \texttt{/prompt}.
+  \begin{lstlisting}[style=shell]
+~/.claude/commands/prompt.md
+~/.claude/commands/learn.md            # extract lessons from this session
+~/.claude/commands/review.md           # review unpushed changes
+~/.claude/commands/today.md            # session progress summary
+~/.claude/commands/scrape.md           # build a scraper for a portal
+~/.claude/commands/interview.md        # flesh out a spec via Q&A
+  \end{lstlisting}
+  \vspace{0.2cm}
+  \textbf{What \texttt{/prompt} does:} I dictate a sloppy half-sentence. The command (a) parses intent, (b) calibrates depth (light/standard/deep), (c) reformats into role + task + constraints + output format, (d) shows me the formatted version, (e) executes.
+  \\
+  \vspace{0.2cm}
+  \footnotesize Net effect: the bottleneck moves from ``what do I type'' to ``what do I want.''
+\end{frame}
+
+\begin{frame}[fragile]{Skills: bundles of expertise the agent loads on demand}
+  \hypertarget{main:skills}{}
+  \appbtn{learning}{continuous learning}
+  \vspace{0.2cm}
+  A skill is a folder with a \texttt{SKILL.md} (frontmatter + instructions) plus reference files.
+  \\
+  Claude reads the frontmatter, decides if the skill is relevant, then pulls in the body.
+  \begin{lstlisting}[style=shell]
+~/.claude/skills/econometrics/         # OLS, IV, GMM, panel, treatment eval
+~/.claude/skills/research-pipeline-qa/ # raw data to paper, end-to-end audits
+~/.claude/skills/hpc/                  # Slurm scripts, USC CARC, modules
+~/.claude/skills/scientific-visualization/  # journal-ready matplotlib/seaborn
+  \end{lstlisting}
+  \vspace{0.2cm}
+  \textbf{Skills $>>$ CLAUDE.md:} Skills load only when triggered, so context stays cheap.
+\end{frame}
+
+\begin{frame}[fragile]{Hooks: deterministic shell commands that fire at lifecycle events}
+  \vspace{0.2cm}
+  \textbf{Hooks guarantee behavior (prompts only suggest it)} 
+  \\
+
+  \begin{lstlisting}[style=shell]
+"PreToolUse":  pre-bash         # block rm -rf, git push --force, secrets
+               pre-edit          # block edits to data/raw/, .env, IRB folders
+               pre-write         # check no PII in new files
+"PostToolUse": post-python-edit  # auto-format with ruff
+               post-latex-edit   # try compiling, push errors back into context
+               post-tool-error   # capture errors for the [LEARN] memory
+"SessionStart": auto-commit memory/ folder, sync configs across machines
+"UserPromptSubmit": skill-router.py  # match prompt against regex, load skill
+"Stop": claude-sync push        # back up the session
+  \end{lstlisting}
+  \vspace{0.1cm}
+\end{frame}
+
+\begin{frame}[fragile]{Agents: a fresh context window with a custom system prompt}
+  \vspace{0.2cm}
+  Agents live at \texttt{\textasciitilde/.claude/agents/<name>.md}. 
+  \\
+  Each one runs in isolation, returns only a summary. Main thread context stays clean.
+  \begin{lstlisting}[style=shell]
+~/.claude/agents/economics-researcher.md  # skilled RA 
+~/.claude/agents/code-reviewer.md         # convention compliance
+~/.claude/agents/codebase-analyst.md      # explore, trace, impact analysis
+~/.claude/agents/data-specialist.md       # SQL, ETL, BigQuery, profiling
+~/.claude/agents/python-pro.md            # refactors, async, performance
+~/.claude/agents/search-papers.md         # semantic search over Zotero
+  \end{lstlisting}
+  \vspace{0.2cm}
+
+\end{frame}
+
+\begin{frame}[fragile]{Opus as the advisor, Sonnet as the worker}
+  \hypertarget{main:models}{}
+  \appbtn{models}{model details}
+  \vspace{0.2cm}
+  \begin{tabular}{p{0.18\textwidth} p{0.74\textwidth}}
+    \toprule
+    \textbf{Sonnet 4.6} & The full session. 95\% of edits, 95\% of commands, 95\% of routine debugging. Cheap, fast, plenty smart.\\
+    \textbf{Opus 4.7} & Pull in for: identification design, replication audits, ``why does this estimator behave this way,'' stuck on a bug for 30+ minutes, reviewing your own writing.\\
+    \bottomrule
+  \end{tabular}
+  \vspace{0.4cm}
+  \textbf{The advisor pattern:}
+  \begin{lstlisting}[style=shell]
+> /model opus
+> Here is the spec, my data, my proposed identification.
+  Critique it as if I were defending at AER. What is the
+  weakest assumption? What would the editor flag?
+> /model sonnet         # back to cheap mode for execution
+  \end{lstlisting}
+  \vspace{0.1cm}
+  \footnotesize Or set \texttt{/model opusplan} interactively: Opus during plan mode, Sonnet for execution. 
+\end{frame}
+
+% ============================================================
+% TRUST & VERIFICATION (2 minutes)
+% ============================================================
+\section{Trust and verification}
+
+\begin{frame}[fragile]{Monorepos}
+  \vspace{0.4cm}
+  \begin{lstlisting}[style=shell]
+my-paper/
+  brainstorm/    # half-formed ideas, the agent writes here
+  plan/          # specs, written by you, edited by Claude
+  code/          # the actual pipeline
+  paper/         # main.tex, refs.bib, figures/, tables/
+  source/        # PDFs, downloaded data, anything raw
+  CLAUDE.md      # what to never touch, what conventions hold
+  \end{lstlisting}
+  \vspace{0.3cm}
+  \textbf{Why this layout:}
+  \begin{itemize}
+    \setlength\itemsep{0.3em}
+    \item One git repo, one place to point Claude.
+    \item \texttt{brainstorm/} and \texttt{plan/} are version-controlled, so you can blame your past self.
+    \item \texttt{source/} is gitignored; \texttt{code/} and \texttt{paper/} are committed.
+    \item Path-scoped rules apply naturally: writing rules in \texttt{paper/}, code rules in \texttt{code/}.
+  \end{itemize}
+\end{frame}
+
+
+\begin{frame}{Tips and Tricks}
+
+  \begin{enumerate}
+    \setlength\itemsep{0.4em}
+    \item \textbf{Use \texttt{/plan}.} Separate ``plan step'' from ``action step.'' This single habit fixes more bad runs than anything else
+    \item \textbf{Use natural language.} Claude parses dictation with ``ums and ahs'' just fine
+    \item \textbf{Use skills and plugins.} Skills are purpose-built instructions. Plugins are bundled skills. Both reduce ``how do I word this'' tax
+    \item \textbf{Use \texttt{--dangerously-skip-permissions}} (a.k.a. YOLO mode) once your hooks are solid
+  \end{enumerate}
+
+\end{frame}
+
+
+\begin{frame}
+  \begin{center}
+    {\Huge\bfseries\color{bhblue} Questions}
+  \end{center}
+\end{frame}
+
+% ============================================================
+% APPENDIX (Q&A backups)
+% ============================================================
+\appendix
+
+\begin{frame}{AEA Data Editor compliance}
+  \hypertarget{app:aea}{}
+  \backbtn{care}{back}
+  \begin{itemize}
+    \setlength\itemsep{0.4em}
+    \item As of April 2026, current policy is silent on AI authorship. Reproducibility requirements are unchanged. Policy is under active discussion, so check before submission.
+    \item What gets deposited is your \texttt{.do} / \texttt{.R} / \texttt{.py}, not the model.
+    \item Best practice: have Claude write \texttt{master.do} + the AEA-template README, then run Cunningham's Referee 2 cross-language replication before submission.
+    \item Disclose AI use in a methods footnote: \emph{``Code developed with Claude Code (Sonnet 4.6 / Opus 4.7).''} 
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Dealing with hallucinations}
+  \hypertarget{app:hallucinations}{}
+  \backbtn{loop}{back}
+  \vspace{0.3cm}
+  Two cases, very different consequences:
+  \begin{itemize}
+    \setlength\itemsep{0.4em}
+    \item \textbf{Prose and citations:} dangerous. BibTeX entries get invented. Verify every citation against your Zotero export.
+    \item \textbf{Code:} Verify step is critical. Write unit tests!
+  \end{itemize}
+  \vspace{0.3cm}
+  Mitigations that work:
+  \begin{itemize}
+    \setlength\itemsep{0.3em}
+    \item Plan mode for any non-trivial task.
+    \item Tests before code (Claude can write the tests too).
+    \item \texttt{git diff} every change before approving.
+    \item Referee 2 in a fresh session 
+  \end{itemize}
+\end{frame}
+
+
+\begin{frame}{Model Use}
+  \hypertarget{app:models}{}
+  \backbtn{models}{back}
+  \vspace{0.2cm}
+  \begin{tabular}{p{0.20\textwidth} p{0.22\textwidth} p{0.46\textwidth}}
+    \toprule
+    \textbf{Model} & \textbf{Tier} & \textbf{Use for}\\
+    \midrule
+    Opus 4.x & Most expensive & Architecture, hard bugs, replication audits, identification design.\\
+    Sonnet 4.x & Default daily driver & 95\% of edits, debugging, routine sessions.\\
+    Haiku 4.x & Cheap and fast & Bulk mechanical work, file renames, log parsing.\\
+    \bottomrule
+  \end{tabular}
+  \vspace{0.4cm}
+
+  \begin{itemize}
+    \setlength\itemsep{0.3em}
+    \item \texttt{/model opusplan}: Opus during plan, Sonnet for execution.
+    \item Cache reads cost roughly 10\% of input rate. Long sessions are cheaper than they look.
+    \item Track via \texttt{/usage} and \texttt{npx ccusage daily}. Check Anthropic's pricing page for current per-token rates.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Path-scoped rules}
+  \hypertarget{app:path-rules}{}
+  \backbtn{claudemd}{back}
+  \vspace{0.2cm}
+  Instead of one giant \texttt{CLAUDE.md}, split conventions by file type and let glob patterns do the routing:
+  \begin{lstlisting}[style=shell]
+~/.claude/rules/
+  global.md       # applies always
+  stata.md        # applies-to: **/*.do, **/*.ado
+  python.md       # applies-to: **/*.py, **/*.ipynb
+  r.md            # applies-to: **/*.R, **/*.Rmd
+  data-work.md    # applies-to: **/data/**, **/build/**
+  research.md     # applies-to: **/analysis/**, **/*.tex
+  gis.md          # applies-to: **/*.shp, **/*.geojson
+  writing.md      # applies-to: **/*.md, **/docs/**
+  \end{lstlisting}
+  \vspace{0.2cm}
+  \textbf{Why this beats one big file:}
+  \begin{itemize}
+    \setlength\itemsep{0.25em}
+    \item Stata-specific gotchas do not pollute Python sessions.
+    \item Each file stays under the canonical 200-line limit.
+    \item Sub-projects can override at the directory level.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Continuous learning}
+  \hypertarget{app:learning}{}
+  \backbtn{skills}{back}
+  \vspace{0.2cm}
+  After every correction or surprising success, write a one-line memory. Future sessions read it on startup.
+  \begin{lstlisting}[style=shell]
+~/.claude/memory/
+  MEMORY.md           # index, max 200 lines, one line per entry
+  user_profile.md     # role, tools, knowledge
+  feedback_*.md       # corrections you do not want to repeat
+  project_*.md        # current state of in-flight work
+  \end{lstlisting}
+  \vspace{0.2cm}
+  \textbf{The rule:} after the second correction on the same issue, write a feedback memory. After the second time an unusual approach worked, write one too.
+  \vspace{0.2cm}
+  \begin{itemize}
+    \setlength\itemsep{0.25em}
+    \item \emph{``PLFS weights need adjusted multipliers for round 7+.''}
+    \item \emph{``For staggered DiD, default to Callaway-Sant'Anna.''}
+    \item \emph{``Never use stargazer. Always modelsummary or esttab.''}
+  \end{itemize}
+  \vspace{0.1cm}
+  \footnotesize Mistake rate falls fast once you have 20 entries. This is the closest thing to actual learning the agent does.
+\end{frame}
+
+\begin{frame}[fragile]{Git worktrees: three Claudes on three branches at once}
+  \hypertarget{app:worktrees}{}
+  \backbtn{git}{back}
+  \vspace{0.2cm}
+  \begin{lstlisting}[style=shell]
+# git creates a sibling checkout on a new branch
+git worktree add ../paper-did feat/staggered-did
+cd ../paper-did && claude   # fresh Claude session, isolated tree
+
+# repeat for each parallel module
+git worktree add ../paper-cleaning feat/clean-rounds
+
+# list, then prune when done
+git worktree list
+git worktree remove ../paper-did
+  \end{lstlisting}
+  \vspace{0.3cm}
+  \textbf{The pattern:}
+  \begin{itemize}
+    \setlength\itemsep{0.3em}
+    \item Three terminal panes. Three branches. Three Claude sessions. Zero merge conflicts during the session because each lives in its own checkout.
+    \item Scope by \emph{module}, not by task. (\texttt{cleaning/}, \texttt{analysis/}, \texttt{paper/}.)
+    \item Practical ceiling: 3--5 parallel sessions. Beyond that you cannot keep up with the diffs.
+    \item Cost: a 3-agent hour costs about a single-agent day. Use deliberately.
+  \end{itemize}
+\end{frame}
+
+\end{document}

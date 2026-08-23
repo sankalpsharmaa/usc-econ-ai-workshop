@@ -1,0 +1,715 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{titlesec}
+\usepackage[hidelinks,colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!60!black,citecolor=blue!50!black]{hyperref}
+\usepackage{parskip}
+\usepackage{fancyhdr}
+
+\definecolor{codebg}{RGB}{245,245,245}
+\definecolor{codekw}{RGB}{0,0,170}
+\definecolor{codestr}{RGB}{34,139,34}
+\definecolor{codecom}{RGB}{120,120,120}
+
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  framerule=0pt,
+  rulecolor=\color{codebg},
+  breaklines=true,
+  breakatwhitespace=false,
+  columns=fullflexible,
+  keywordstyle=\color{codekw}\bfseries,
+  stringstyle=\color{codestr},
+  commentstyle=\color{codecom}\itshape,
+  showstringspaces=false,
+  xleftmargin=4pt,
+  xrightmargin=4pt,
+  aboveskip=6pt,
+  belowskip=6pt,
+}
+
+\titleformat{\section}{\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries}{\thesubsubsection}{1em}{}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small Claude Code for Empirical Economists}
+\fancyhead[R]{\small Sharma --- USC, April 2026}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\title{\textbf{Claude Code for Empirical Economists:\\ A Reference Compendium}}
+\author{Sankalp Sharma\\ Department of Economics, University of Southern California\\ \texttt{ssharma9@usc.edu}}
+\date{April 27, 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent Claude Code is Anthropic's agentic command-line interface to its frontier large language models. Unlike chatbots or in-editor autocompleters, it runs a stateful read--plan--edit--run--verify loop with full filesystem and shell access, acting as a research assistant across an entire empirical project: cleaning data, estimating models, building replication packages, drafting manuscripts, and auditing the result. This compendium covers four areas: the technical fundamentals of the tool as of v2.1; the economics-specific ecosystem that emerged in 2025--26 (Goldsmith-Pinkham, Cunningham, Sant'Anna, Panjwani, Korinek, Grundl); concrete workflows for Stata, R, Python, and \LaTeX; and recommended configurations for safety, cost, reproducibility, and AEA-compliant replication. On standardized researcher-variation tasks, Claude Code matches trained human researchers in central tendency but cuts across-run dispersion by a factor of two to twenty-seven (Grundl, 2026). Three risks dominate for empirical economists: Stata-specific API hallucination, methodological drift on novel extensions, and unsafe handling of restricted data. Each is catalogued below with a prescribed mitigation.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+% =====================================================================
+\section{Introduction}
+
+Frontier large language models have entered empirical economic research in earnest. Anthropic's \emph{Claude Code} --- an agentic terminal CLI launched in early 2025, now shipping as v2.1 --- breaks from the chat assistants (ChatGPT, Claude.ai) and in-editor autocompleters (Copilot, Cursor) that economists have used since 2023. The defining property is \emph{agency}: given a research goal, Claude Code reads files, plans, edits source across many files, runs shell commands, inspects logs, and iterates. Lead engineer Boris Cherny calls it ``a Unix utility, not an IDE.''
+
+Three properties make the shift consequential for working economists. First, the loop grounds output in execution: code that fails to compile or to produce expected numbers is caught at runtime. The hallucinations that plague retrieval-style LLM use --- invented citations, fabricated coefficients --- collapse when the model must run what it writes. Second, the marginal cost of an additional specification approaches zero. Anthropic reports active-day spending of roughly \$6 per user, with 90\% of users below \$12. Third, a credible benchmarking literature now exists. Grundl (2026) reruns the Huntington-Klein--P\"ortner researcher-variation experiment with Claude Code playing the ``researcher'' and finds that estimated treatment effects match human researchers in mean and median while exhibiting two-to-twenty-seven times lower across-run dispersion.
+
+The economist-specific literature matured rapidly in late 2025 and early 2026. Substantial public guides now come from Goldsmith-Pinkham (2026), Cunningham (2025), Sant'Anna (2026), Panjwani (2026), and Korinek (2025). This compendium consolidates rather than duplicates that material, organizing it into a single reference for the working empirical economist.
+
+The paper proceeds as follows. Section~\ref{sec:fundamentals} catalogues technical fundamentals. Section~\ref{sec:literature} surveys the economist-specific resources. Section~\ref{sec:workflows} documents workflows by language and task. Section~\ref{sec:practices} prescribes configurations and operational practices. Section~\ref{sec:evidence} reviews the empirical evidence on capability and failure. Section~\ref{sec:conclusion} concludes.
+
+% =====================================================================
+\section{Technical Fundamentals}\label{sec:fundamentals}
+
+\subsection{What Claude Code Is}
+
+Claude Code is a command-line program that drives Anthropic's Claude family of models (currently Opus 4.7, Sonnet 4.6, and Haiku 4.5). The CLI exposes the model to the local filesystem and shell, equips it with a fixed toolkit --- file read/write, search, bash, web fetch, sub-agent spawning --- and runs it inside a perception--action loop. The same engine powers Claude.ai, the VS Code and JetBrains plugins, the desktop and iOS apps, \texttt{claude.ai/code}, and the Claude Agent SDK (Python, TypeScript). This document treats the CLI, the most flexible of these surfaces.
+
+\subsection{Installation and Authentication}
+
+The recommended installer (2026) is the Anthropic-hosted bash script:
+\begin{lstlisting}[language=bash]
+# macOS / Linux / WSL
+curl -fsSL https://claude.ai/install.sh | bash
+# Windows PowerShell
+irm https://claude.ai/install.ps1 | iex
+\end{lstlisting}
+
+Alternatives include Homebrew (\texttt{brew install --cask claude-code}), winget (\texttt{winget install Anthropic.ClaudeCode}), and npm (\texttt{npm install -g @anthropic-ai/claude-code}, requires Node 18+).
+
+Authentication routes:
+\begin{itemize}[leftmargin=*,nosep]
+    \item Browser OAuth using a Pro, Max, Team, or Enterprise account on claude.ai. The free tier is \emph{not} eligible.
+    \item \texttt{ANTHROPIC\_API\_KEY} environment variable for pay-as-you-go API billing.
+    \item Amazon Bedrock (\texttt{CLAUDE\_CODE\_USE\_BEDROCK=1}), Google Vertex AI, Microsoft Foundry, or LiteLLM proxy for institutional cloud routing.
+\end{itemize}
+
+Verification: \texttt{claude --version} confirms install; \texttt{claude doctor} diagnoses install, authentication, and configuration. Launch modes: \texttt{claude} (interactive REPL), \texttt{claude "fix bug X"} (interactive with seed prompt), \texttt{claude -p "..."} (headless, single-shot), \texttt{claude -c} or \texttt{claude --resume} (continue a prior session).
+
+\subsection{Built-in Tools}
+
+The model has access to a fixed toolkit that it invokes by name during its agentic loop. Core tools: \texttt{Read}, \texttt{Write}, \texttt{Edit}, \texttt{MultiEdit}, \texttt{NotebookEdit}, \texttt{Bash}, \texttt{Glob}, \texttt{Grep}, \texttt{WebFetch}, \texttt{WebSearch}, \texttt{Agent} (renamed from \texttt{Task} in v2.1.63), \texttt{TodoWrite}, \texttt{AskUserQuestion}, \texttt{ExitPlanMode}, and \texttt{EnterWorktree}. Anthropic deliberately chose agentic search via grep and glob over retrieval-augmented generation (RAG) with vector stores, on the basis of internal benchmarks reported by Cat Wu and Boris Cherny.
+
+\subsection{The CLAUDE.md Memory Hierarchy}
+
+\texttt{CLAUDE.md} files are plain-Markdown documents loaded into every session as part of the system prompt. The hierarchy is:
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Scope} & \textbf{Path} & \textbf{Shared via} \\
+\midrule
+Managed policy & \texttt{/etc/claude-code/CLAUDE.md} (Linux) & Organization \\
+Project & \texttt{./CLAUDE.md} or \texttt{./.claude/CLAUDE.md} & Git \\
+User & \texttt{\textasciitilde/.claude/CLAUDE.md} & Personal, all projects \\
+Local & \texttt{./CLAUDE.local.md} (gitignored) & Personal, this project \\
+\bottomrule
+\end{tabular}
+\caption{The CLAUDE.md memory hierarchy. More specific scopes override broader ones.}
+\end{table}
+
+The CLI walks up the directory tree concatenating all encountered \texttt{CLAUDE.md} files. Subdirectory \texttt{CLAUDE.md} files load on demand when the model accesses files in that subtree. Imports are supported via \texttt{@README.md}, \texttt{@docs/conventions.md}, \texttt{@\textasciitilde/.claude/personal-rules.md} syntax to a maximum depth of five.
+
+A new \emph{auto-memory} facility (v2.1.59+) writes to \texttt{\textasciitilde/.claude/projects/<proj>/memory/MEMORY.md} as Claude takes its own notes; the first 200 lines or 25\,KB are loaded into each subsequent session. The project-root \texttt{CLAUDE.md} is preserved through \texttt{/compact}.
+
+The canonical length guidance from both Anthropic and HumanLayer is to keep the project \texttt{CLAUDE.md} under 200 lines. HumanLayer's own root file is under 60. Each line should pass the test ``would removing this cause Claude to make mistakes?'' If not, cut it. The directives \texttt{IMPORTANT} and \texttt{YOU MUST} materially increase adherence but are diluted by overuse.
+
+\subsection{Slash Commands}
+
+Built-in slash commands as of v2.1.120: \texttt{/help}, \texttt{/init}, \texttt{/clear}, \texttt{/compact [instructions]}, \texttt{/usage} (merged from \texttt{/cost} and \texttt{/stats}), \texttt{/model}, \texttt{/effort low|medium|high|max}, \texttt{/agents}, \texttt{/mcp}, \texttt{/permissions}, \texttt{/hooks}, \texttt{/memory}, \texttt{/review}, \texttt{/security-review}, \texttt{/pr\_comments}, \texttt{/resume}, \texttt{/rewind} (or \texttt{Esc Esc}), \texttt{/rename}, \texttt{/export}, \texttt{/config}, \texttt{/vim}, \texttt{/bug}, \texttt{/doctor}, \texttt{/status}, \texttt{/context}, \texttt{/plan}, \texttt{/btw} (sidebar question; does not enter context), \texttt{/feedback}, \texttt{/desktop}, \texttt{/teleport}, \texttt{/statusline}, \texttt{/theme}, \texttt{/plugin}, \texttt{/skills}, \texttt{/loop}, \texttt{/schedule}. Bundled higher-level skills include \texttt{/simplify}, \texttt{/batch}, \texttt{/debug}, \texttt{/code-review}, \texttt{/ultrareview}, and \texttt{/ultraplan}.
+
+\subsection{Custom Commands and Skills}
+
+In the 2026 architecture, custom commands have been merged with skills. A file at \texttt{.claude/commands/deploy.md} and one at \texttt{.claude/skills/deploy/SKILL.md} both expose \texttt{/deploy}. The recommended format uses YAML frontmatter:
+
+\begin{lstlisting}[language=]
+---
+name: regression-table
+description: Convert estout output to publication LaTeX table
+allowed-tools: Bash(esttab *) Read Edit
+model: sonnet
+paths: ["code/analysis/**"]
+argument-hint: "[spec-name]"
+---
+Generate a booktabs LaTeX table from $ARGUMENTS using esttab conventions...
+\end{lstlisting}
+
+Available variables: \texttt{\$ARGUMENTS}, \texttt{\$1}, \texttt{\$\{CLAUDE\_SESSION\_ID\}}, \texttt{\$\{CLAUDE\_PLUGIN\_ROOT\}}. Dynamic context can be injected with the \texttt{!} prefix (e.g., a line beginning ``\texttt{- PR diff: !`gh pr diff`}'' embeds live shell output).
+
+\subsection{Subagents and the Agent Tool}
+
+Subagents run in a separate context window with their own system prompt and tool restrictions, returning only a summary to the main thread. Built-in subagents include \texttt{Explore} (read-only search), \texttt{Plan} (research during plan mode), \texttt{general-purpose}, \texttt{Bash}, and \texttt{claude-code-guide}. Custom subagents are defined in \texttt{.claude/agents/<name>.md}:
+
+\begin{lstlisting}[language=]
+---
+name: referee-2
+description: Empirical-economics critic. Use proactively after analysis changes.
+tools: Read, Grep, Bash(Rscript *), Bash(stata -b *)
+model: opus
+---
+You are Referee 2 for AER. Adversarially critique identification, SE clustering, robustness...
+\end{lstlisting}
+
+Invocation routes: automatic (the main agent reads the description and decides), explicit natural language (``use the referee-2 subagent to...''), \texttt{@referee-2} mention, or session-wide via \texttt{claude --agent referee-2}. Up to approximately seven parallel subagents have been observed in practice. Subagents \emph{cannot} spawn further subagents, which prevents recursive nesting.
+
+The critical pattern for economists: subagents preserve main-thread context. A \emph{Referee 2} subagent that reads 200 files and returns a one-paragraph critique consumes those tokens in its own window; the main session sees only the summary.
+
+\subsection{Model Context Protocol (MCP)}
+
+MCP is an open standard for connecting Claude Code to external tools. Servers are added via:
+
+\begin{lstlisting}[language=bash]
+claude mcp add --transport http github https://api.githubcopilot.com/mcp/ \
+    --header "Authorization: Bearer $GH_PAT"
+claude mcp add --transport stdio --env STATA_PATH=/usr/local/stata18 \
+    stata -- npx -y stata-mcp
+\end{lstlisting}
+
+Scopes: User (\texttt{\textasciitilde/.claude.json}), Project (\texttt{.mcp.json}, committed to the repo), and Local (default, machine-specific).
+
+Servers of particular interest to economists:
+\begin{itemize}[leftmargin=*,nosep]
+    \item \textbf{stata-mcp} (\texttt{sepinetam}; also \texttt{hanlulong}) --- drives Stata directly, enabling iteration on errors.
+    \item \textbf{playwright} / \textbf{puppeteer} --- browser automation for portal scraping.
+    \item \textbf{filesystem}, \textbf{github}, \textbf{postgres}, \textbf{dbhub} --- data and version-control plumbing.
+    \item \textbf{context7} --- live, current package documentation.
+    \item \textbf{sequential-thinking} --- structured chain-of-thought scaffolding.
+    \item \textbf{slurm-mcp} (\texttt{dongwookim-ml}) --- remote HPC job submission.
+    \item \textbf{fred-mcp}, \textbf{bls-mcp}, \textbf{census-mcp} --- direct access to U.S. statistical agencies.
+\end{itemize}
+
+\emph{Tool Search} is the default discovery mechanism in 2026: rather than loading every MCP tool's schema into every prompt, MCP tool schemas are deferred and fetched on demand. This is governed by \texttt{ENABLE\_TOOL\_SEARCH=true|auto|auto:N}.
+
+\subsection{Permission Modes}
+
+\texttt{Shift+Tab} cycles through modes:
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Mode} & \textbf{Behavior} \\
+\midrule
+\texttt{default} & Prompt before edits, Bash, MCP \\
+\texttt{acceptEdits} & Auto-approve edits; prompt for Bash \\
+\texttt{plan} & Read-only; no changes permitted \\
+\texttt{auto} & Background classifier model approves safe operations \\
+\texttt{dontAsk} & Pre-approved tools only \\
+\texttt{bypassPermissions} & All checks skipped (\texttt{--dangerously-skip-permissions}); hooks still fire \\
+\bottomrule
+\end{tabular}
+\caption{Permission modes.}
+\end{table}
+
+Per-tool allow and deny rules are configured in \texttt{.claude/settings.json}:
+
+\begin{lstlisting}[language=]
+{"permissions": {
+  "allow": ["Read","Glob","Grep","Bash(git status:*)","Bash(Rscript:*)"],
+  "deny":  ["Read(./.env*)","Read(./data/raw/**)","Read(./irb/**)",
+            "Bash(rm -rf:*)","Bash(git push --force:*)"]
+}}
+\end{lstlisting}
+
+\textbf{Important caveat (January 2026, multiple GitHub issues):} deny rules are silently bypassed for compound bash commands and absolute paths. Hard enforcement requires \texttt{PreToolUse} hooks (Section~\ref{sec:hooks}).
+
+\subsection{Context Management}
+
+The standard context window is 200{,}000 tokens; Opus 4.7 / 4.6 and Sonnet 4.6 support a one-million-token window at standard pricing. Auto-compaction triggers at approximately 75--80\% utilization. Tools for context discipline:
+
+\begin{itemize}[leftmargin=*,nosep]
+    \item \texttt{/clear} --- full reset; irreversible.
+    \item \texttt{/compact [instructions]} --- summarize current context, retaining instructed elements.
+    \item \texttt{Esc Esc} or \texttt{/rewind} --- checkpoint menu; revert to a prior turn.
+    \item \texttt{/btw} --- ask an out-of-band question without polluting the working context.
+    \item \texttt{/context} --- visualize current token allocation.
+\end{itemize}
+
+The dominant anti-pattern is the \emph{kitchen-sink session}: a single REPL accumulating dozens of unrelated tasks. Anthropic's recommended discipline is to \texttt{/clear} between unrelated tasks, and after two consecutive failed corrections, to \texttt{/clear} and rewrite the prompt with the lessons learned.
+
+\subsection{Hooks}\label{sec:hooks}
+
+Hooks are deterministic shell or HTTP commands that fire at lifecycle events. The aphorism is: \emph{hooks guarantee behavior; prompts suggest it}. Events include \texttt{SessionStart}, \texttt{UserPromptSubmit}, \texttt{PreToolUse}, \texttt{PostToolUse}, \texttt{PreCompact}, \texttt{PostCompact}, and \texttt{Stop}. The exit codes that matter: \texttt{0} proceed, \texttt{2} block, \texttt{1} warn-only.
+
+Common patterns: auto-format on Edit, block \texttt{rm -rf} or \texttt{git push --force}, inject git status at \texttt{SessionStart}, re-inject working context after \texttt{PostCompact}, block edits to \texttt{.env} or \texttt{raw\_data/}. Hooks fire even when \texttt{--dangerously-skip-permissions} is set --- they are the safety net of last resort.
+
+\subsection{Models and Costs}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}llrl@{}}
+\toprule
+\textbf{Model} & \textbf{Alias} & \textbf{Input/Output (USD/M)} & \textbf{Use for} \\
+\midrule
+Opus 4.7 & \texttt{opus} & \$5 / \$25 & Architecture, hard bugs, replication audits \\
+Opus 4.6 & (legacy)      & \$5 / \$25 & Same; older tokenizer \\
+Sonnet 4.6 & \texttt{sonnet} & \$3 / \$15 & Daily driver \\
+Sonnet 4.5 & (legacy)     & \$3 / \$15 & ZDR-eligible workloads \\
+Haiku 4.5 & \texttt{haiku} & \$1 / \$5 & Bulk mechanical work \\
+\bottomrule
+\end{tabular}
+\caption{Pricing as of April 2026. Opus 4.7 produces approximately 35\% more tokens via a new tokenizer.}
+\end{table}
+
+Prompt caching: cache writes are billed at $1.25\times$ (5-minute TTL) or $2\times$ (1-hour TTL); cache reads are billed at $0.1\times$ --- a 90\% discount. The special alias \texttt{--model opusplan} runs Opus during planning and Sonnet during execution. The flag \texttt{--max-budget-usd 5.00} hard-caps headless runs. Per-day spend is tracked via \texttt{/usage} or via the third-party \texttt{npx ccusage daily}, which parses \texttt{\textasciitilde/.claude/projects/*.jsonl}.
+
+For academics, the practical recommendation is the Max 5x plan at \$100/month, which is approximately 2--2.5$\times$ cheaper than direct API access at typical PhD-student workloads. Pro at \$20/month suffices for one to two short sessions per day. Max 20x at \$200/month and direct API access are reserved for CI, headless batch, and per-project cost attribution. Anthropic's published averages: approximately \$6 per active day, with 90\% of users below \$12 per day.
+
+\subsection{Headless Mode and CI}
+
+\begin{lstlisting}[language=bash]
+claude -p "Explain this project" --output-format json
+git diff main --name-only | claude -p "Review for SE clustering errors"
+claude --permission-mode auto -p "fix all lint errors" --max-budget-usd 2.00
+for f in $(cat files.txt); do
+  claude -p "Migrate $f to fixest" --allowedTools "Edit"
+done
+\end{lstlisting}
+
+The official GitHub Actions integration is \texttt{anthropics/claude-code-action}. Bare mode (\texttt{--bare}) skips MCP discovery for fast startup.
+
+\subsection{Recent Changes (v2.1 era)}
+
+Opus 4.7 ships with a new \texttt{xhigh} default reasoning effort. \texttt{/cost} and \texttt{/stats} have been merged into \texttt{/usage}. Custom commands have been folded into Skills. Auto-memory and Tool Search are default. The \texttt{Task} tool was renamed \texttt{Agent}. New facilities include Agent Teams (multi-session coordination), Routines (cloud-scheduled agents), Computer Use preview, voice dictation, and a PowerShell-native tool. The \texttt{ultrathink} keyword was deprecated and then re-introduced in v2.1.68; extended thinking is now on by default and is governed by \texttt{/effort}.
+
+Canonical primary sources:
+\begin{itemize}[leftmargin=*,nosep]
+    \item \url{https://code.claude.com/docs/en/best-practices}
+    \item \url{https://code.claude.com/docs/en/memory}
+    \item \url{https://code.claude.com/docs/en/sub-agents}
+    \item \url{https://code.claude.com/docs/en/mcp}
+    \item \url{https://code.claude.com/docs/en/hooks-guide}
+    \item \href{https://www-cdn.anthropic.com/58284b19e702b49db9302d5b6f135ad8871e7658.pdf}{Anthropic, ``How Anthropic teams use Claude Code''}
+\end{itemize}
+
+% =====================================================================
+\section{Annotated Literature: Economics-Specific Resources}\label{sec:literature}
+
+\subsection{Tier 1: Essential References}
+
+\paragraph{Goldsmith-Pinkham (2026).} Yale SOM finance / NBER. The seven-part Markus' Academy mini-series ``Claude Code for Applied Economists'' (Episodes 162-1 through 162-7, recorded at the Princeton Bendheim Center, March--April 2026) is the most actively viewed long-form reference. Series hub: \url{https://markusacademy.substack.com/p/claude-code-for-applied-economists}. Episodes cover Getting Started (\url{https://www.youtube.com/watch?v=HzgByl5ZsWE}), Data Collection, Web Scraping, Large Datasets (\url{https://www.youtube.com/watch?v=4uwI1-9DafU}), Writing \& Thinking (\url{https://www.youtube.com/watch?v=BxfSiB3Moyo}), and two further episodes; per-episode write-ups appear at the Markus Academy Substack. Demonstrations include: a \textbf{Census home-ownership pipeline} where Claude locates the data, scrapes, cleans, and produces plotting scripts; a \textbf{SEC EDGAR 10-K} extraction that builds a DuckDB database of risk-factor disclosures and shows tariff-related risk language rising in frequency and specificity; and an \textbf{HMDA mortgage panel} that converts large CSVs to Parquet, indexes them in DuckDB, and produces a county-level lender-concentration panel. The \emph{Writing \& Thinking} episode demonstrates building a personal style guide from one's own past papers and using Skills to scaffold a referee-response revision plan. Tooling recommendations: Max plan at \$100/month, DuckDB and Parquet for everything above $\sim$5\,GB, and the Skills feature for any reusable workflow.
+
+\paragraph{Cunningham (2025--26).} Baylor; author of \emph{Causal Inference: The Mixtape}. Active Substack series at \url{https://causalinf.substack.com/archive} (40+ posts as of April 2026) and the \texttt{MixtapeTools} repository: \url{https://github.com/scunning1975/MixtapeTools}. The repository ships six skills: \emph{Referee 2}, \emph{Blindspot}, \emph{Split-PDF}, \emph{Beautiful Deck}, \emph{TikZ}, and \emph{Newproject}. The \textbf{Referee 2} skill is the most consequential single artifact in the economist-facing Claude Code ecosystem: a five-audit protocol --- Code Audit, Cross-Language Replication, Directory Audit, Output Automation Audit, Econometrics Audit --- run by a fresh Claude instance in a fresh terminal, with no prior exposure to the project. Cunningham himself describes it as ``a health inspector for empirical research,'' delivered as a formal referee report with a revise-and-resubmit pass.
+
+The most viral economist-friendly Claude Code anecdote is Cunningham's replication of Card et al.\ (2022) (PNAS), which classifies $\sim$200{,}000 congressional and 5{,}000 presidential immigration-related communications. Substituting GPT-4o-mini for the original RoBERTa classifier, Cunningham reports a total cost of \textbf{\$10.99} and a wall-clock time of \textbf{$\sim$4.6 hours} (1\,h setup + 2.6\,h compute + 1\,h analysis), with \textbf{69\% agreement} against the original published classifications. The original team's labeling step was estimated at 7 RAs and well over \$10{,}000. See \emph{Claude Code 15: The Results Are In} (\url{https://causalinf.substack.com/p/claude-code-15-the-results-are-in}) for the full write-up.
+
+\paragraph{Panjwani (2026).} Northwestern economics PhD, ex-Zelle/Early Warning ML engineer; runs \emph{The AI MBA} (\url{https://ai-mba.io}). The most polished public Claude-Code-with-Stata tutorial. The YouTube walkthrough ``How to Use Claude Code with Stata --- PhD Economist Explains'' (\url{https://www.youtube.com/watch?v=YLQvQ2MD2Y8}) demonstrates the side-by-side terminal/Stata pattern, prompt construction for cleaning and reshaping, and use of \texttt{pdfgrep}/\texttt{pdfplumber} to query Stata's PDF documentation. The VoxDev/CEPR webinar ``AI Agents for Economic Research'' (March 2026, $\sim$750 live attendees), slides at \url{https://voxdev.org/sites/default/files/2026-03/AI_Agents_for_Economic_Research.pdf}, generalizes the pattern to research workflows. As of March 2026 Panjwani recommends mixing Codex (80\%) with Claude Code (20\%) at the higher subscription tiers --- a useful signal that the agent-tooling landscape remains in flux.
+
+\paragraph{P.\ Sant'Anna (2026).} Emory; Callaway--Sant'Anna co-author; \emph{Econ 730: Causal Panel Data}. The \texttt{claude-code-my-workflow} repository (\url{https://github.com/pedrohcgs/claude-code-my-workflow}; guide at \url{https://psantanna.com/claude-code-my-workflow/}) is the most fully realized economics-academic Claude Code template. Verified contents: \textbf{28 skills, 14 agents, 24 path-scoped rules, and 6 hooks}. Multi-agent adversarial QA is calibrated against AER, QJE, JPE, ECMA, and ReStud expectations. Built during preparation for Econ 730: produced six PhD lecture decks (800+ slides), interactive Quarto versions, and full R replication packages. Adopted by 15+ research groups across economics, energy, political science, and engineering as of March 2026. \emph{Recommended as the ``fork tonight if you want depth'' starting point.}
+
+\paragraph{H.\ Sant'Anna (2026).} UAB. \texttt{Clo-Author} (\url{https://github.com/hugosantanna/clo-author}; site at \url{https://hsantanna.org/clo-author/}) reorients the Pedro Sant'Anna template from lecture production to a research-paper pipeline. Seventeen specialized agents (including six worker--critic pairs plus referees, a data engineer, and a verifier), 26+ slash commands, 30 journal profiles spanning economics, finance, accounting, and marketing. Phase-based severity: encouraging at \emph{Discovery}, adversarial at simulated \emph{Peer Review}. AEA replication compliance and a blind-review simulation are built in. Validated for DiD, IV, RDD, synthetic control, and event studies.
+
+\paragraph{Korinek (2025).} UVA / Brookings / NBER; member of the Anthropic Economic Advisory Council. ``AI Agents for Economic Research,'' NBER Working Paper 34202, \textbf{September 2025}: \url{https://www.nber.org/papers/w34202}; companion Substack at \url{https://genaiforecon.substack.com/}; project hub at \texttt{GenAIforEcon.org}. Korinek (2025) ``aims to demystify AI agents --- autonomous LLM-based systems that plan, use tools, and execute multi-step research tasks --- and provides hands-on instructions for economists to build their own, even without programming expertise.'' Capabilities demonstrated include autonomous literature reviews across many sources, writing and debugging econometric code, fetching and analyzing economic data, and coordinating multi-step research workflows. The earlier Korinek (2023) (NBER 30957) provides the now widely-cited six-domain taxonomy of LLM use cases for economists --- ideation, writing, background research, data analysis, coding, and mathematical derivations --- which Korinek (2025) updates and extends to agentic tools. The pair are the authoritative academic citations.
+
+\paragraph{Grundl (2026).} Principal Economist, Federal Reserve Board (Research \& Statistics). ``Claude Code as an Empirical Economist: Like Humans but Without the Tails,'' SSRN 6219138, posted \textbf{February 11, 2026}: \url{https://papers.ssrn.com/sol3/papers.cfm?abstract_id=6219138}; companion site \url{https://claude-code-economist.com/}. The benchmark task is the causal effect of DACA eligibility on full-time employment for Hispanic and Mexican immigrants in the U.S., posed in three task variants. Each AI system runs \textbf{100 independent replications} per variant. Means and medians of estimated effects are ``fairly similar'' between Claude Code and human researchers; across-Claude-run dispersion is ``substantial,'' but human across-researcher dispersion is \textbf{two to twenty-seven times larger}. Grundl concludes that AI systems of this class ``can serve as scalable tools for producing novel empirical research, large-scale replication, and robustness analysis.'' This is the first apples-to-apples benchmark of Claude Code against human empirical economists on a real causal-inference task, by a Fed economist --- and accordingly the most rhetorically powerful empirical finding available for a skeptical academic audience.
+
+\subsection{Tier 2: Very Useful}
+
+\paragraph{Blattman (2026).} Chris Blattman, Ramalee E.\ Pearson Professor of Global Conflict Studies, Harris School, University of Chicago. \emph{Claude Blattman}: \url{https://claudeblattman.com/} (site launched January 2026; companion repo at \url{https://github.com/chrisblattman/claudeblattman}). Blattman is the most prominent senior, self-described non-coding social scientist using Claude Code as an ``executive function'' tool. The site documents skills for inbox triage, morning briefings, meeting prep and follow-up, project dashboards, proposal drafting, and trip planning. The most-circulated anecdote: applying a custom Gmail-filter triage skill, his inbox dropped from $\sim$5{,}000--5{,}600 unread emails to six in roughly a day and a half (X thread \url{https://x.com/cblatts/status/2027018464670491065}). He maintains weekly project-status skills that ingest meeting transcripts, project emails, and WhatsApp threads for $\sim$10 active research projects (Executive Assistant page: \url{https://claudeblattman.com/toolkit/executive-assistant/}). Blattman: ``Four weeks ago I was a Claude Code skeptic. Now I'm 120\% sold.'' The site is the proof-of-concept that the gains do not require coding fluency.
+
+\paragraph{Straus and Hall (2026).} Graham Straus (UCLA PhD student) and Andrew B. Hall (Stanford GSB). ``How Accurately Did Claude Code Replicate and Extend a Published Political Science Paper?'' \url{https://www.andrewbenjaminhall.com/Straus_Hall_Claude_Audit.pdf}. The audited paper is Thompson et al.\ (2020) (PNAS), ``Universal vote-by-mail has no impact on partisan turnout or vote share.'' Documented findings: Claude exactly replicates the original headline estimates; correctly codes \textbf{29 of 30 California counties} on treatment timing; and on a new election-data collection task achieves correlation \textbf{above 0.999} with Straus's manual hand collection. Documented error modes on extensions: drift from the prompt, missed races, data collected and never used, poor documentation of analytic choices, and one substantive inconsistency where Claude wrote that it had restricted to eventual VCA-adopting CA counties while the event-study code retained never-treated observations. No outright hallucinations or ``crazy errors.'' A companion thread by Hall (\url{https://x.com/ahall_research/status/2007603340939800664}) documents Claude Code writing a complete empirical political-science paper in approximately one hour. This is the cleanest published capability-and-failure demonstration for an empirical social-science audience.
+
+\paragraph{Pepinsky (2026).} Tom Pepinsky, Walter F.\ LaFeber Professor of Government, Cornell. ``Agentic AI and Social Science Research Practice,'' January 23, 2026: \url{https://tompepinsky.com/2026/01/23/agentic-ai-and-social-science-research-practice/}. Pepinsky calls agentic AI a ``seismic shift'' for social science and writes that ``Claude Code writes and executes code better and faster than what I can do on my own.'' His key analytical move is to draw the line between knowledge retrieval (where ``the hallucination problem is real'' and LLMs cannot reliably produce citations or literature reviews) and code execution (where the agent is grounded). His normative claim --- that ``the relative value of knowledge and expertise is higher than it was five years ago, and the value of being able to code has plummeted'' --- is the cleanest framing of the human-capital implication for PhD economists. He cautions that agentic AI is ``ripe for p-hacking'' because the agent will ``produce results it thinks you want to hear,'' and recommends restricting it to rule-following tasks.
+
+\paragraph{Other key Tier-2 sources.}
+\begin{itemize}[leftmargin=*,nosep]
+    \item \textbf{Xu and Yang} (Stanford / HKBU, 2026), ``Scaling Reproducibility,'' \url{https://yiqingxu.org/papers/2026_ai/AI_reproducibility.pdf}: 100\% reproducibility on 92 papers comprising 215 specifications, in under four minutes per paper. The strongest existence proof for Claude Code as automated AEA Data Editor companion.
+    \item \textbf{Cherny and Wu} (Anthropic), Latent Space podcast, May 8, 2025: \url{https://www.latent.space/p/claude-code}. Primary source for the design philosophy: early Claude Code prototypes used RAG with vector stores; the team switched to agentic search via grep and glob because it ``performs a lot better based on benchmarks and vibes,'' and avoids the indexing, sync, and external-dependency overheads of RAG. Anthropic-internal stat reported on the episode: \textbf{80--90\% of Claude Code's own code is written by Claude}; Cherny reports a personal 2$\times$ productivity gain.
+    \item \textbf{Anthropic Economic Advisory Council} (April 28, 2025): \url{https://www.anthropic.com/news/introducing-the-anthropic-economic-advisory-council}. Members: Tyler Cowen (GMU/Mercatus), Oeindrila Dube (Harris), Tomas J.\ Philipson (Chicago), Silvana Tenreyro (LSE), Chiara Farronato (HBS), John List (Chicago), Ioana Marinescu (Penn), and Anton Korinek (UVA). Charter: advise Anthropic on AI's impact on labor markets, growth, and broader socioeconomic systems; informs the Anthropic Economic Index research agenda.
+    \item \textbf{Anthropic} (March 23, 2026), ``Long-running Claude for scientific computing'': \url{https://www.anthropic.com/research/long-running-Claude}. Authored by Siddharth Mishra-Sharma (Anthropic Discovery team). The case study implements a differentiable cosmological Boltzmann solver for the cosmic microwave background --- coupled equations across photons, baryons, neutrinos, and dark matter --- on an HPC cluster running SLURM (\texttt{--partition=GPU-shared}, \texttt{--gres=gpu:h100-32:1}, \texttt{--time=48:00:00}), with Claude Code inside \texttt{tmux} for detach/reattach. The pattern relies on three artifacts: a progress file, a test oracle, and an agent prompt with explicit rules. The \emph{Ralph loop} (named after the community ``Ralph Wiggum'' pattern, also shipped as the \texttt{ralph-loop} plugin) is defined as ``essentially a for loop which kicks the agent back into context when it claims completion, and asks if it's really done,'' iterating until the success criterion holds. Claim: ``can compress months or even years of researcher work into days,'' though the resulting solver is not production-grade.
+    \item \textbf{Stata Blog} (October 7, 2025), ``Stata commands to run ChatGPT, Claude, Gemini, and Grok'': \url{https://blog.stata.com/2025/10/07/stata-commands-to-run-chatgpt-claude-gemini-and-grok/}. First-party StataCorp endorsement of LLM integration into Stata. Updates a 2023 post (the original \texttt{chatgpt} ado broke after an OpenAI API change). Provides ado-files for \texttt{chatgpt}, \texttt{claude}, \texttt{gemini}, and \texttt{grok} commands; usage e.g.\ \texttt{claude "Write a haiku about Stata."} Maximally legitimizes LLM use for traditional Stata users.
+    \item \textbf{Cornwl}, ``Claude Code \& Cowork for Academic Research,'' \url{https://cornwl.github.io/files/claude-academic-guide.html}: best \LaTeX/Beamer/Quarto guide.
+    \item \textbf{Hanlu Long}, \texttt{awesome-ai-for-economists}, \url{https://github.com/hanlulong/awesome-ai-for-economists}: curated index. Companion \texttt{econ-writing-skill} synthesizes 50+ writing guides (Cochrane, McCloskey, Shapiro).
+    \item \textbf{Dylan Moore}, \texttt{stata-skill}, \url{https://github.com/dylantmoore/stata-skill}: 37 reference files, 20 community packages (\texttt{reghdfe}, \texttt{ivreg2}, \texttt{csdid}, \texttt{did\_multiplegt}, \texttt{rdrobust}, \texttt{psmatch2}, \texttt{synth}, \texttt{binsreg}, \texttt{coefplot}, \texttt{gtools}).
+    \item \textbf{SepineTam}, \texttt{stata-mcp}, \url{https://github.com/SepineTam/stata-mcp}: MCP server allowing Claude Code to execute Stata. Resolves the ``Claude can write \texttt{.do} files but cannot iterate on errors'' gap.
+    \item \textbf{letitbk}, \texttt{claude-academic-setup}, \url{https://github.com/letitbk/claude-academic-setup}: one-shot installer with 22 skills, 13 plugins, sandbox mode pre-configured.
+    \item \textbf{Antonio Mele}, \emph{Awesome Econ AI Stuff}, \url{https://meleantonio.github.io/awesome-econ-ai-stuff/}: curated DiD/IV/RD Stata skills.
+    \item \textbf{Tyler Ransom} (Associate Professor, Oklahoma), six-month retrospective \url{https://tyleransom.substack.com/p/how-ive-been-using-claude-for-the}: concrete Stata, R, and \LaTeX{} prompts. Reports using Claude to write bespoke Stata programs despite 15+ years of Stata use without ever having written his own ado. Verbatim BibTeX-maker prompt: ``I'd like you to act as a bibtex entry maker\,\dots Please include full names as much as possible, put periods after middle initials, and Chicago-style proper capitalize the title. Please include doi (or url if doi is unavailable). If the doi is available don't put in the url. Also don't put the publication month.''
+    \item \textbf{Aziz Sunderji}, \emph{Home Economics}, ``How I use Claude Code'': \url{https://homeeconomics.substack.com/p/how-i-use-claude-code}: workflow notes from a working economist-turned-data-journalist.
+    \item \textbf{Autonomous Econ}, ``10 Claude Code Tips for Analysts and Economists'': \url{https://autonomousecon.substack.com/p/the-10-claude-code-habits-that-turn}: practitioner habits checklist.
+    \item \textbf{Mihail Velikov}, AI-Econ Wiki, \url{https://velikov-mihail.github.io/ai-econ-wiki/}: episode-by-episode summaries of the Goldsmith-Pinkham series and adjacent talks.
+    \item \textbf{Andrew B.\ Hall}, ``The 100x Research Institution'': \url{https://freesystems.substack.com/p/the-100x-research-institution}: companion essay to the Straus--Hall audit, projecting the institutional consequences.
+    \item \textbf{Hanlulong}, \texttt{stata-mcp} (distinct from SepineTam's), \url{https://github.com/hanlulong/stata-mcp}: Stata Workbench in VS Code with MCP at \texttt{localhost:4000/mcp-streamable}.
+    \item \textbf{Jill0099}, \texttt{causal-inference-mixtape} skill: templates for DiD, RDD, IV, and synthetic control in three languages, derived from Cunningham's \emph{Mixtape}.
+    \item \textbf{Z.\ R.\ Chen}, workflow site, \url{https://zhiyuanryanchen.github.io/claude-code-workflow.html}: Sant'Anna-derived starter.
+    \item \textbf{Raul Guarini Riva}, \emph{Resources for Economists}, \url{https://rgriva.github.io/resources}: a model for what an institutional follow-up resource page might look like.
+\end{itemize}
+
+\subsection{Tier 3: Adjacent and Skeptic Counterweights}
+
+Ethan Mollick (\emph{One Useful Thing}), ``Claude Code and What Comes Next''; the Anthropic Skilljar course (\url{anthropic.skilljar.com/claude-code-in-action}); the \texttt{awesome-claude-code} repositories (hesreallyhim, jqueryscript, VoltAgent); \texttt{fcakyon/phd-skills}; \texttt{flonat/claude-research}; \texttt{Galaxy-Dawn/claude-scholar}; John Horton (MIT Sloan), \emph{Large Language Models as Simulated Economic Agents} and \emph{Automated Social Science: Language Models as Scientist and Subjects} --- focused on LLMs as research \emph{subjects} rather than as a coding tool, but adjacent to questions about Claude Code's role in research; Henry Farrell, ``AI is great for scientists. Perhaps it's not so great for science'' (\url{https://www.programmablemutter.com/p/ai-is-great-for-scientists-perhaps}) --- the most articulate skeptic counterweight on aggregate-knowledge effects.
+
+% =====================================================================
+\section{Applied Workflows by Language and Task}\label{sec:workflows}
+
+\subsection{Data Cleaning and Wrangling}
+
+Representative prompts:
+\begin{enumerate}[leftmargin=*,nosep]
+    \item ``Read \texttt{raw/cps\_2010\_2023.dta} (45M rows). Convert to a Polars LazyFrame, build a balanced state-by-year-by-industry panel, create one- and two-year lags of \texttt{log\_emp} within \texttt{state\_id $\times$ naics4}. Write Parquet to \texttt{data/derived/}. Verify balance and report missing cells.''
+    \item ``Probabilistic record linkage: match \texttt{raw/borrowers.csv} (PMJDY beneficiaries) to \texttt{raw/sec\_credit\_bureau.csv} on noisy names plus DOB. Use \texttt{splink} with Jaro--Winkler. Output match probabilities and a calibration plot. Mark below 0.85 as unmatched.''
+    \item ``This 22\,GB Stata \texttt{.dta} will not fit in memory. Rewrite \texttt{clean\_admin.do} using \texttt{gtools} (\texttt{gcollapse}, \texttt{gegen}) and \texttt{frame}s instead of \texttt{preserve}/\texttt{restore}. Benchmark.''
+\end{enumerate}
+
+\textbf{Pitfalls.} Claude defaults to pandas where Polars or DuckDB would be faster --- specify the engine. Stata's silent drops on \texttt{merge m:1} require \texttt{assert \_merge != 1}. Indian administrative data often mixes UTF-8 and Latin-1; PIN codes lose leading zeros if stored as integers.
+
+\subsection{Econometric Analysis}
+
+\paragraph{Stata.}
+\begin{itemize}[leftmargin=*,nosep]
+    \item ``Run TWFE: \texttt{reghdfe log\_wage treated\#\#post X, absorb(state\_id\#\#year) cluster(state\_id)}. Export with \texttt{esttab} to booktabs LaTeX. Save \texttt{tables/main.tex}.''
+    \item ``Convert \texttt{analysis.do} from \texttt{xtreg, fe} to \texttt{reghdfe} and \texttt{ivreghdfe}. Verify estimates match to four decimals.''
+    \item ``Coefplot of an event study: \texttt{coefplot, keep(L*.treat F*.treat) vertical yline(0)}, drop $t=-1$, shade the pre-period gray.''
+\end{itemize}
+
+\paragraph{R / Python.}
+\begin{itemize}[leftmargin=*,nosep]
+    \item ``Re-estimate \texttt{01\_main.R} with \texttt{fixest::feols}; export with \texttt{modelsummary} + \texttt{kableExtra} to booktabs LaTeX.''
+    \item ``Port the Stata regression to Python via \texttt{pyfixest} (Apoorva Lal's \texttt{fixest} port). Verify cluster-robust SEs match to $10^{-6}$.''
+    \item ``Specification curve: $2^7$ covariate combinations via \texttt{pyfixest} in joblib parallel.''
+\end{itemize}
+
+\paragraph{The Stata hallucination problem.} Mikko R\"onkk\"o on Statalist describes Claude as ``a bit less capable with Stata than with R.'' Documented failures include: inventing \texttt{reghdfe} options that do not exist; defaulting to plain TWFE for staggered designs (the operator must explicitly request Callaway--Sant'Anna or \texttt{did\_multiplegt}); and confusing the standard-error conventions of \texttt{xtreg, fe} versus \texttt{reghdfe}. The mitigation stack is to install \texttt{dylantmoore/stata-skill} together with \texttt{sepinetam/stata-mcp}. Without the MCP, Claude can write \texttt{.do} files but cannot iterate on Stata's error output.
+
+\subsection{Replication Packages (AEA)}
+
+The eight-section AEA README structure: Overview; Data Availability Statements; Dataset List; Computational Requirements; Description of Programs; Instructions to Replicators; Table and Figure Mapping; References. Templates: \texttt{AEADataEditor/replication-template} and \texttt{AEADataEditor/docker-stata}. Recommended directory layout:
+
+\begin{lstlisting}[language=]
+project/
+|-- README.pdf                           (AEA template)
+|-- data/{raw, derived}/
+|-- code/{00_setup.R, 01_dataprep/, 02_analysis/, 03_appendix/}
+`-- results/
+\end{lstlisting}
+
+Audit prompts:
+\begin{enumerate}[leftmargin=*,nosep]
+    \item ``Audit my package against the AEA Data Editor checklist. For every table and figure in \texttt{paper.tex}, identify the producing line. Flag missing data citations.''
+    \item ``Set up \texttt{renv} and pin all R versions; create a Dockerfile based on \texttt{aeadataeditor/docker-stata}. Run end-to-end.''
+    \item ``Run \texttt{master.do}. Diff every output against \texttt{results/expected/}. Fail loudly on any discrepancy greater than $10^{-6}$.''
+\end{enumerate}
+
+\textbf{Pitfalls.} Claude generates plausible-looking master scripts that do not run end-to-end. Always test in a clean container. Hard-coded paths sneak in --- a pre-commit hook that greps for \texttt{C:\textbackslash} or \texttt{/Users/} catches most.
+
+\subsection{\LaTeX{}}
+
+\begin{itemize}[leftmargin=*,nosep]
+    \item ``Convert \texttt{tables/main.csv} (esttab output) into booktabs with a midrule between Panels A and B, escaped column headers, and a tablenotes block for cluster SEs.''
+    \item ``Build Beamer slides from \texttt{paper/main.tex} Section 4. One result per slide, title-as-assertion (e.g., `Treatment increased earnings 8.4\%'), no bullets, \texttt{metropolis} theme.''
+    \item Tyler Ransom's BibTeX-maker prompt: ``Act as a BibTeX entry maker --- pass jumbled metadata, return BibTeX. Full names, periods after middle initials, Chicago title case, DOI or URL, lowercase bibkey.''
+\end{itemize}
+
+\LaTeX{} is among Claude's strongest ecosystems. The principal pitfall is occasional invention of package names; require it to enumerate every \texttt{\textbackslash usepackage} it adds. Beamer overflow detection requires actually compiling, which Sant'Anna's slide-auditor agent automates.
+
+\subsection{Literature Review and PDF Handling}
+
+Claude Code reads PDFs natively, sending bytes directly to the model. This is token-expensive for typical economics papers. Panjwani's pattern is to ``update the skill to use \texttt{pandoc}, \texttt{pdfgrep}, and \texttt{pdfplumber} to query documentation more efficiently.'' Cunningham's MixtapeTools includes a PDF-reading skill.
+
+Sample prompts:
+\begin{itemize}[leftmargin=*,nosep]
+    \item ``Read all PDFs in \texttt{lit/}. Extract: identification strategy, main estimator, key effect size with SE, replication-package availability. Output a sortable Markdown table.''
+    \item ``For papers in \texttt{lit/did/} using staggered adoption with plain TWFE, list candidates for re-analysis with Callaway--Sant'Anna.''
+\end{itemize}
+
+For bibliography management, Zotero with Better BibTeX auto-export to a committed \texttt{.bib} file is the recommended pipeline. Hallucinated citations are the classic failure mode; \emph{Clo-Author} and \emph{Sant'Anna} both ship dedicated citation-fidelity audit agents.
+
+
+\subsection{HPC and SLURM}
+
+The pattern from Mishra-Sharma's cosmological Boltzmann-solver case study (Anthropic, March 2026):
+
+\begin{lstlisting}[language=bash]
+#!/bin/bash
+#SBATCH --job-name=claude-agent
+#SBATCH --gres=gpu:h100-32:1
+#SBATCH --time=48:00:00
+cd $PROJECT/my-project && source .venv/bin/activate
+tmux new-session -d -s claude "claude; exec bash"
+tmux wait-for claude
+\end{lstlisting}
+
+Reattach via \texttt{srun --jobid=JOBID --overlap --pty tmux attach -t claude}.
+
+\textbf{Known bugs.} GitHub issue \#12507: Claude Code exits on HPC interactive sessions because stdin is consumed by shell-detection logic. Issue \#21026: the bash tool fails when \texttt{/run/user/} is absent. The pragmatic workaround is to run Claude Code on the login node and have it write \texttt{sbatch} jobs, or to use \texttt{dongwookim-ml/slurm-mcp} for remote submission.
+
+\textbf{USC CARC.} No CARC-specific Claude Code documentation has been published. Generic patterns apply: SSH to \texttt{discovery.usc.edu}, start \texttt{tmux}, launch Claude Code, and have it write \texttt{sbatch} scripts targeting CARC partitions.
+
+\subsection{GIS and Spatial Workflows}
+
+Sample prompts:
+\begin{itemize}[leftmargin=*,nosep]
+    \item ``Read \texttt{shapefiles/india\_districts\_2011.shp} with GeoPandas. Project to EPSG:7755. Spatial-join with \texttt{raw/villages.csv} (lat/lon WGS84). Assert greater than 99\% match.''
+    \item ``DHS data with displaced coordinates (5\,km rural / 2\,km urban). Buffer correctly and aggregate VIIRS nightlights via \texttt{rasterio} \texttt{zonal\_stats}.''
+\end{itemize}
+
+\textbf{Pitfalls.} CRS errors are silent and lethal. Force \texttt{CLAUDE.md} to require printing \texttt{df.crs} after every load. 
+
+\subsection{Polyglot Projects (Stata + R + Python + \LaTeX)}
+
+A master Makefile in the Gentzkow--Shapiro lineage:
+
+\begin{lstlisting}[language=make]
+.PHONY: all clean data analysis paper
+all: paper
+
+data/derived/panel.parquet: code/01_clean.do data/raw/*.dta
+	stata -b do code/01_clean.do && python code/01b_validate.py
+
+tables/%.tex: code/02_%.R data/derived/panel.parquet
+	Rscript $<
+
+paper/main.pdf: paper/main.tex tables/*.tex figures/*.pdf
+	cd paper && latexmk -xelatex main.tex
+\end{lstlisting}
+
+The convention is one language per task: Stata for IPUMS/DHS extraction, R for econometrics, Python for scraping and spatial work, \LaTeX{} for the paper. Inter-language exchange is Parquet only. Path-scoped \texttt{CLAUDE.md} rules are placed in each subdirectory.
+
+% =====================================================================
+\section{Recommended Practices}\label{sec:practices}
+
+\subsection{A Composite \texttt{CLAUDE.md} Template}
+
+The following $\sim$120-line template is fork-ready:
+
+\begin{lstlisting}[language=]
+# CLAUDE.md - [Project Name]
+
+## Project
+- Author: [Name], [Institution]
+- Topic: [1-line]
+- Stack: Stata 18, R 4.3 (fixest, modelsummary), Python 3.11
+        (polars, pyfixest), XeLaTeX
+- Master entry: `make all`
+
+## Core Principles
+1. Plan-first for any task touching >2 files or >30 min
+2. Replication-first: replicate paper-of-record to <1e-2 before extending
+3. Verify-after: actually run code; never claim "done" without execution
+4. No silent drops: every merge asserts on _merge flags
+
+## Folder Structure
+data/{raw,derived}/      # parquet only in derived/
+code/{stata,R,python}/
+paper/                   # main.tex, refs.bib (Better BibTeX export)
+tables/ figures/
+results/expected/        # gold-standard for replication audit
+
+## Conventions
+- FE engine: reghdfe (Stata) | feols (R) | pyfixest (Python).
+  Never plain xtreg, fe.
+- Staggered DiD: Callaway-Sant'Anna or did_multiplegt; never plain TWFE.
+- Cluster SE level: district_id (treatment level)
+- Tables: booktabs + esttab/modelsummary; stargazer forbidden
+- Random seed: 20260415 set in every master script
+
+## Stata-specific
+- ssc install reghdfe, ivreghdfe, ftools, gtools, estout, coefplot, csdid
+  at top of master.do
+- Use `frame` not preserve/restore for big data
+- For files >5GB use gtools, NOT collapse
+
+## Forbidden
+- pdflatex (use xelatex)
+- pandas for files >5GB (use polars/duckdb)
+- Absolute paths
+- Non-deterministic seeds (Sys.time(), runiform())
+- Editing data/raw/
+
+## Replication audit hooks
+- Pre-commit: `make check` runs verify_outputs.py diffing
+  tables/ vs results/expected/
+- Hard fail on numbers differing by >1e-6
+\end{lstlisting}
+
+\subsection{A Recommended \texttt{settings.json} for Academics}
+
+\begin{lstlisting}[language=]
+{
+  "model": "claude-sonnet-4-6",
+  "permissions": {
+    "allow": ["Read","Glob","Grep","Bash(git status:*)","Bash(git diff:*)",
+              "Bash(Rscript:*)","Bash(make test:*)","Bash(quarto render:*)"],
+    "deny":  ["Read(./.env*)","Read(./data/raw/**)","Read(./irb/**)",
+              "Bash(rm -rf:*)","Bash(git push --force:*)"]
+  },
+  "hooks": [
+    {"matcher": "Bash", "hooks": [{"type": "command",
+      "command": ".claude/hooks/git-safe.sh"}]}
+  ],
+  "env": {"DISABLE_TELEMETRY": "1", "MAX_THINKING_TOKENS": "31999"}
+}
+\end{lstlisting}
+
+\subsection{Git Workflow and Worktrees}
+
+Worktrees are the highest-leverage productivity practice. As of v2.1.50, the CLI supports them natively: \texttt{claude --worktree feature-staggered-did} creates \texttt{.claude/worktrees/feature-staggered-did/} on a new branch. Manually: \texttt{git worktree add ../proj-did feature/did \&\& cd ../proj-did \&\& claude}. The practical ceiling is three to five parallel sessions; scope by module rather than by task. Rebase rather than merge between worktrees. Boris Cherny ships 20--30 PRs per day using this pattern.
+
+Conventional commits are recommended; specify the convention explicitly in \texttt{CLAUDE.md}: ``Use Conventional Commits. Scopes: \texttt{data}, \texttt{model}, \texttt{paper}, \texttt{slides}, \texttt{replication}.'' PRs are created via the \texttt{gh} CLI. \texttt{git diff} is mandatory before approving any change. A useful adversarial pattern is to pipe the diff to a fresh-context Claude: \texttt{git diff main..HEAD | claude -p "review for econometric correctness"}.
+
+\subsection{Sensitive Data: What Not to Send}
+
+\begin{itemize}[leftmargin=*,nosep]
+    \item \textbf{PII} (names, SSNs, DOBs, addresses) --- never.
+    \item \textbf{IRB-restricted human-subjects data} --- protocols almost certainly forbid exfiltration.
+    \item \textbf{FERPA-protected} student records.
+    \item \textbf{HIPAA PHI.} Anthropic's HIPAA readiness covers \texttt{api.anthropic.com} only --- \emph{not} the Claude Code product. This is a frequent and consequential confusion.
+    \item \textbf{Title 13 / 26} (Census, IRS) --- FSRDC and Census HQ only; Claude Code is not approved inside enclaves.
+    \item \textbf{Proprietary administrative data} (Nielsen, Visa scanner data, Indian Aadhaar-linked records) --- read the data-use agreement carefully.
+\end{itemize}
+
+\paragraph{Anthropic data-retention reality.}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabularx}{\linewidth}{@{}lXl@{}}
+\toprule
+\textbf{Account} & \textbf{Trains on data?} & \textbf{Retention} \\
+\midrule
+Free / Pro / Max consumer (incl.\ CC via consumer login) & \emph{Yes if you do not opt out} (default flipped September 2025) & 5 yr opt-in / 30 d opt-out \\
+API (commercial) & No & 30 d (7 d under new policy) \\
+Team / Enterprise & No & Per UI \\
+ZDR (commercial only) & No; deleted in minutes & $\sim$0 \\
+\bottomrule
+\end{tabularx}
+\caption{Anthropic data-retention by account type.}
+\end{table}
+
+ZDR is commercial-API and Enterprise only. Pro and Max accounts \emph{cannot} obtain ZDR. ``Claude Code signed in with a personal account is still under consumer terms'' --- a common misconception.
+
+\paragraph{Practical settings.} Set \texttt{DISABLE\_TELEMETRY=1} and \texttt{CLAUDE\_CODE\_DISABLE\_FEEDBACK\_SURVEY=1}. Avoid \texttt{/bug}, which bundles the session for transmission. For sensitive datasets, route through AWS Bedrock or GCP Vertex inside an institutional cloud account. The \emph{schema-only} pattern for restricted data is: \texttt{head -0 data.csv > schema.csv}, send the schema, develop the pipeline against synthetic data, then port to the secure enclave.
+
+\paragraph{Hard enforcement via PreToolUse hooks.} As noted, deny rules are unreliable per multiple GitHub issues. The reliable mechanism is a hook:
+
+\begin{lstlisting}[language=]
+{"hooks": [{"matcher": "Bash", "hooks": [{"type": "command",
+  "command": "scripts/check-no-pii.sh"}]}]}
+\end{lstlisting}
+
+\subsection{Cost Management}
+
+Default to Sonnet 4.6. Reserve Opus 4.7 for stuck debugging, identification design, and replication audits. Use Haiku 4.5 for high-volume mechanical work. The alias \texttt{--model opusplan} runs Opus during planning and Sonnet during execution. Track spend with \texttt{npx ccusage daily}. Cap headless runs with \texttt{claude -p "..." --max-budget-usd 5.00}. A three-agent Agent Team consumes approximately seven times the tokens of a single agent: a one-hour three-agent session is approximately equivalent in cost to a full single-agent day.
+
+\subsection{Common Pitfalls}
+
+\begin{enumerate}[leftmargin=*,nosep]
+    \item \textbf{Stata API hallucination} --- invented \texttt{reghdfe} options. Mitigate with \texttt{stata-skill} + \texttt{stata-mcp}.
+    \item \textbf{Methodological drift} --- in the Hall audit, Claude omitted always-treated states, miscoded one county's treatment year, and omitted non-presidential elections. Replication-first protocols catch this.
+    \item \textbf{Auto-compaction context loss} (issue \#36068) --- drops user-stated intent. Mitigate by compacting at 60\% proactively with explicit preservation; a \texttt{PreCompact} hook can save a snapshot.
+    \item \textbf{Loops on broken tests} --- after two failed attempts, escalate with ``ultrathink. Consider that the test may be wrong'' or invoke \texttt{/rewind}.
+    \item \textbf{Sycophancy} --- never ask yes/no. Ask ``find at least three issues with this'' or ``critique as Referee 2.''
+    \item \textbf{Cost runaway} --- Opus + auto-accept + extended thinking + Agent Teams can exceed \$100/day.
+    \item \textbf{Permission fatigue} leading to unsafe blanket approval. Use Auto Mode (background classifier) or sandbox mode.
+    \item \textbf{Hallucinated user input} (issue \#10628) --- Claude inserts \texttt{\#\#\#Human:} mid-output. \texttt{/clear} immediately when this is observed.
+\end{enumerate}
+
+\subsection{Replication Audits}
+
+A reproducible workflow:
+\begin{enumerate}[leftmargin=*,nosep]
+    \item \texttt{git clone} the package, \texttt{cd} in, run \texttt{claude}.
+    \item ``Read README.md and the code structure. Tell me software versions, missing data, entry point. Do not run anything yet.''
+    \item ``Set up the environment (\texttt{renv} or \texttt{conda}). Run the master script. Tee to \texttt{logs/run.log}. If it fails, diagnose.''
+    \item ``Compare each table to \texttt{paper.pdf}. Flag cells differing by more than 0.001 or sign flips.''
+    \item Adversarial pass in a fresh session: ``Critique as Referee 2. Are SE clusters appropriate? Is the robustness suspiciously narrow?''
+\end{enumerate}
+
+Use Opus 4.7 for this work; the model's eleven-percentage-point recall advantage on real Anthropic PRs matters here.
+
+\subsection{Prompt Engineering for Research}
+
+\begin{itemize}[leftmargin=*,nosep]
+    \item ``Do not write code yet. Make a plan first.'' (Plan Mode is \texttt{Shift+Tab}.)
+    \item ``Interview me using \texttt{AskUserQuestion} until you have a complete spec; write to \texttt{SPEC.md}; then I will start a fresh session to execute.''
+    \item ``ultrathink'' for one-turn high effort; \texttt{/effort high} session-wide.
+    \item ``Prove this works. Run the tests. Diff against main.''
+    \item Anti-sycophancy: ``Grill me on these changes. Do not make a PR until I pass your test.''
+    \item Counter-prompt for review: ``Knowing everything you know now, scrap this and implement the elegant solution.''
+    \item Iterate two to three times --- Anthropic reports outputs improve significantly with iteration.
+\end{itemize}
+
+% =====================================================================
+\section{Empirical Evidence on Capability and Failure Modes}\label{sec:evidence}
+
+\subsection{Grundl (2026): The Researcher-Variation Benchmark}
+
+Grundl (2026) takes a single concrete causal question --- the effect of DACA eligibility on full-time employment for Hispanic and Mexican immigrants in the U.S. --- and runs it through Claude Code 100 times per task variant, across three variants. He compares the resulting distribution of estimated treatment effects to the analogous human distribution from the Huntington-Klein/P\"ortner researcher-variation literature. Means and medians match across the two populations. Across-Claude-run dispersion is substantial. Across-human-researcher dispersion is two-to-twenty-seven times larger. Read straight: on tasks of this complexity, Claude Code matches a trained empirical economist in accuracy and beats one in consistency. Grundl concludes that AI systems of this class ``can serve as scalable tools for producing novel empirical research, large-scale replication, and robustness analysis.''
+
+The result carries unusual weight for a skeptical economist audience. It is recent (February 2026), by a Fed economist, and on a real causal-inference task --- three properties absent from most LLM benchmarks.
+
+\subsection{Straus and Hall (2026): The Replication Audit}
+
+Straus and Hall (2026) audit Claude Code's replication and extension of Thompson et al.\ (2020), a PNAS paper on universal vote-by-mail. The replication results are striking: Claude exactly reproduces the published headline estimates, codes 29 of 30 California counties correctly on treatment timing, and produces a new election-data collection that correlates above 0.999 with the human-collected benchmark. The extension results are clinical. Asked to push the analysis to novel cuts, Claude drifts from the prompt, misses some races, collects data and then fails to use it, documents analytic choices poorly, and in one case writes that it has restricted to eventual VCA-adopting California counties while the event-study code retains never-treated observations. No outright hallucinations or absurd errors. The lesson partitions cleanly: Claude is reliable when bounded by an existing artifact --- paper, code, expected output --- and unreliable on open methodological extension. The catching protocol writes itself: replicate first, extend second, verify continuously.
+
+\subsection{Xu and Yang (2026): Reproducibility at Scale}
+
+Xu and Yang (2026) run Claude Code on 92 papers (215 specifications) and reproduce them all in under four minutes per paper. The result is an existence proof: Claude Code can serve as an automated AEA Data Editor companion. Several journals are now exploring exactly this deployment.
+
+\subsection{Synthesis}
+
+The three studies converge. Claude Code performs as a competent applied econometrician on bounded tasks --- replication, well-posed estimation, table generation --- and outperforms human researchers in consistency. It fails on open-ended methodological extension and underperforms on Stata relative to R or Python. The operational corollaries follow directly: replicate before extending, audit across languages, and install \texttt{stata-skill} + \texttt{stata-mcp} for any Stata project.
+
+% =====================================================================
+\section{Conclusion}\label{sec:conclusion}
+
+As of April 2026, Claude Code sits closer to standard equipment than to experimental novelty in empirical economic research. Three forces moved it there: an execution loop that converts hallucinations into runtime failures; a body of economist-specific tooling --- skills, MCP servers, journal-calibrated audit agents; and benchmarks showing low across-run dispersion.
+
+Three operational recommendations follow. First, default to Sonnet 4.6 and reserve Opus 4.7 for replication audits and identification design. Second, install \texttt{dylantmoore/stata-skill} and \texttt{sepinetam/stata-mcp} on any project with a meaningful Stata footprint --- the highest-leverage single configuration step. Third, treat permission deny rules as advisory and PreToolUse hooks as the load-bearing safety mechanism, especially on projects touching Indian administrative data, IRB-bound surveys, or FSRDC-adjacent workflows. Anthropic's HIPAA readiness does not extend to Claude Code; plan accordingly.
+
+% =====================================================================
+\section*{Reading List}
+\addcontentsline{toc}{section}{Reading List}
+\begin{enumerate}[leftmargin=*,nosep]
+    \item Korinek, A.\ (2025). ``AI Agents for Economic Research.'' NBER Working Paper 34202, September. \url{https://www.nber.org/papers/w34202}
+    \item Korinek, A.\ (2023). ``Language Models and Cognitive Automation for Economic Research.'' NBER Working Paper 30957. \url{https://www.nber.org/papers/w30957}
+    \item Grundl, S.\ J.\ (2026). ``Claude Code as an Empirical Economist: Like Humans but Without the Tails.'' SSRN 6219138, February 11. \url{https://papers.ssrn.com/sol3/papers.cfm?abstract_id=6219138}
+    \item Goldsmith-Pinkham, P.\ (2026). ``Claude Code for Applied Economists,'' Markus' Academy mini-series (Episodes 162-1 through 162-7), March--April. \url{https://markusacademy.substack.com/p/claude-code-for-applied-economists}
+    \item Cunningham, S.\ (2025--26). MixtapeTools. \url{https://github.com/scunning1975/MixtapeTools}; ``Claude Code 15: The Results Are In'' (PNAS replication of Card et al.\ 2022). \url{https://causalinf.substack.com/p/claude-code-15-the-results-are-in}
+    \item Sant'Anna, P.\ H.\ C.\ (2026). claude-code-my-workflow. \url{https://github.com/pedrohcgs/claude-code-my-workflow}
+    \item Sant'Anna, H.\ (2026). Clo-Author. \url{https://github.com/hugosantanna/clo-author}
+    \item Panjwani, A.\ (2026). ``AI Agents for Economic Research,'' VoxDev/CEPR webinar slides, March. \url{https://voxdev.org/sites/default/files/2026-03/AI_Agents_for_Economic_Research.pdf}
+    \item Blattman, C.\ (2026). \emph{Claude Blattman}. \url{https://claudeblattman.com/}
+    \item Pepinsky, T.\ (2026). ``Agentic AI and Social Science Research Practice,'' January 23. \url{https://tompepinsky.com/2026/01/23/agentic-ai-and-social-science-research-practice/}
+    \item Straus, G.\ and A.\ B.\ Hall (2026). ``How Accurately Did Claude Code Replicate and Extend a Published Political Science Paper?'' \url{https://www.andrewbenjaminhall.com/Straus_Hall_Claude_Audit.pdf}
+    \item Thompson, D.\ M., J.\ A.\ Wu, J.\ Yoder, and A.\ B.\ Hall (2020). ``Universal vote-by-mail has no impact on partisan turnout or vote share.'' \emph{PNAS} 117(25): 14052--14056.
+    \item Card, D., S.\ Chang, C.\ Becker, J.\ Mendelsohn, R.\ Voigt, L.\ Boustan, R.\ Abramitzky, and D.\ Jurafsky (2022). ``Computational analysis of 140 years of US political speeches reveals anti-immigrant rhetoric prevalent across hostile and friendly periods.'' \emph{PNAS}.
+    \item Xu, Y.\ and W.\ Yang (2026). ``Scaling Reproducibility.'' \url{https://yiqingxu.org/papers/2026_ai/AI_reproducibility.pdf}
+    \item Cherny, B.\ and C.\ Wu (2025). Latent Space podcast, May 8. \url{https://www.latent.space/p/claude-code}
+    \item Mishra-Sharma, S.\ (2026). ``Long-running Claude for scientific computing.'' Anthropic, March 23. \url{https://www.anthropic.com/research/long-running-Claude}
+    \item Anthropic (2025). ``Introducing the Anthropic Economic Advisory Council,'' April 28. \url{https://www.anthropic.com/news/introducing-the-anthropic-economic-advisory-council}
+    \item Anthropic (2026). ``Best Practices for Claude Code.'' \url{https://code.claude.com/docs/en/best-practices}
+    \item Anthropic (2025). ``How Anthropic teams use Claude Code.'' \url{https://www-cdn.anthropic.com/58284b19e702b49db9302d5b6f135ad8871e7658.pdf}
+    \item StataCorp (2025). ``Stata commands to run ChatGPT, Claude, Gemini, and Grok,'' October 7. \url{https://blog.stata.com/2025/10/07/stata-commands-to-run-chatgpt-claude-gemini-and-grok/}
+    \item Ransom, T.\ (2026). ``How I've been using Claude for the past six months.'' \url{https://tyleransom.substack.com/p/how-ive-been-using-claude-for-the}
+    \item Willison, S.\ (2025). ``Things we learned about LLMs in 2025.'' simonwillison.net, December.
+    \item AEA Data Editor. Replication Policy and Templates. \url{https://aeadataeditor.github.io/}
+\end{enumerate}
+
+\vspace{1em}
+\noindent\rule{\linewidth}{0.4pt}
+\small\textit{Author's note.} This document was prepared as background reference material for a 30-minute USC Department of Economics workshop on Claude Code for empirical economic research, April 2026. Comments and corrections welcome at \texttt{ssharma9@usc.edu}.
+
+\end{document}

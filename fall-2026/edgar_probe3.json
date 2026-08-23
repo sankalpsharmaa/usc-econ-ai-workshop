@@ -1,0 +1,96 @@
+{
+ "master_idx_total": {
+  "n_quarters": 135,
+  "total_KB": 2346325,
+  "total_GB": 2.24,
+  "first": [
+   [
+    "1993Q1",
+    1
+   ],
+   [
+    "1993Q2",
+    1
+   ]
+  ],
+  "last": [
+   [
+    "2026Q2",
+    31120
+   ],
+   [
+    "2026Q3",
+    16316
+   ]
+  ]
+ },
+ "est_total_filings": 26793042,
+ "filing_index_json": {
+  "status": 200,
+  "sample": "{\"directory\":{\"item\":[{\"last-modified\": \"2024-11-01 06:01:36\",\"name\":\"0000320193-24-000123-index-headers.html\",\"type\":\"text.gif\",\"size\":\"\"},{\"last-modified\": \"2024-11-01 06:01:36\",\"name\":\"0000320193-24-000123-index.html\",\"type\":\"text.gif\",\"size\":\"\"},{\"last-modified\": \"2024-11-01 06:01:36\",\"name\":\"0000320193-24-000123.txt\",\"type\":\"text.gif\",\"size\":\"\"},{\"last-modified\": \"2024-11-01 06:01:36\",\"name\":\"0000320193-24-000123-xbrl.zip\",\"type\":\"compressed.gif\",\"size\":\"458550\"},{\"last-modified\": \"2024-11-01 06:01:36\",\"name\":\"a10-kexhibit10199282024.htm\",\"type\":\"text.gif\",\"size\":\"56948\"},{\"last-modified\": \"2024-11-01 06:01:36\",\"name\":\"a10-kexhibit10209282024.htm\",\"type\":\"text.gif\",\"size\":\"74591\"},{\"las"
+ },
+ "data_sec_headers": {
+  "status": 200,
+  "headers": {
+   "x-amzn-RequestId": "dd6d0e73-9091-45ee-9f4a-6e1015746d5f",
+   "Access-Control-Allow-Origin": "*",
+   "x-amz-apigw-id": "Cih4yH-KoAMEonA=",
+   "X-Amzn-Trace-Id": "Root=1-6a8a7d04-9c75d1e0db81e2068cb9ee44",
+   "Content-Type": "application/json",
+   "Vary": "Accept-Encoding",
+   "Date": "Sun, 23 Aug 2026 04:55:15 GMT",
+   "Transfer-Encoding": "chunked",
+   "Connection": "close",
+   "Strict-Transport-Security": "max-age=31536000 ; preload"
+  }
+ },
+ "no_ua": {
+  "status": 403,
+  "body": "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n<head>\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" />\n<title>SEC.gov | Your Request Originates from an Undeclar"
+ },
+ "cik_lookup": {
+  "bytes": 40002136,
+  "lines": 1056221,
+  "head": ":0001003197:\n:0001036125:\n:0001161343:\n:0001593547:\n!J INC:0001438823:\n#1 A LIFESAFER HOLDINGS, INC.:0001509607:\n#1 ARIZONA DISCOUNT PROPERTIES LLC:0001457512:\n#1 PAINTBALL CORP:0001433777:\n#TNM SMALL"
+ },
+ "mfrr": {
+  "status": 404,
+  "n_links": 0,
+  "sample": []
+ },
+ "logs": {
+  "status": 200,
+  "n_links": 0,
+  "sample": []
+ },
+ "crowdfunding": {
+  "status": 200,
+  "n_links": 41,
+  "sample": [
+   "/files/dera/data/crowdfunding-offerings-data-sets/2016q2_cf.zip",
+   "/files/dera/data/crowdfunding-offerings-data-sets/2016q3_cf.zip",
+   "/files/dera/data/crowdfunding-offerings-data-sets/2016q4_cf.zip",
+   "/files/dera/data/crowdfunding-offerings-data-sets/2017q1_cf.zip"
+  ]
+ },
+ "regd": {
+  "status": 200,
+  "n_links": 74,
+  "sample": [
+   "/files/datastandardsinnovation/data/form-d-data-sets/2026q2_d.zip",
+   "/files/structureddata/data/form-d-data-sets/2008q1_d.zip",
+   "/files/structureddata/data/form-d-data-sets/2008q2_d_0.zip",
+   "/files/structureddata/data/form-d-data-sets/2008q3_d_0.zip"
+  ]
+ },
+ "mmf": {
+  "status": 404,
+  "n_links": 0,
+  "sample": []
+ },
+ "abs": {
+  "status": 404,
+  "n_links": 0,
+  "sample": []
+ }
+}

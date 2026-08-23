@@ -1,0 +1,25 @@
+\frametitle{Git worktrees: three Claudes on three branches at once}
+\hypertarget{app:worktrees}{}
+  \backbtn{git}{back}
+  \vspace{0.2cm}
+  \begin{lstlisting}[style=shell]
+# git creates a sibling checkout on a new branch
+git worktree add ../paper-did feat/staggered-did
+cd ../paper-did && claude   # fresh Claude session, isolated tree
+
+# repeat for each parallel module
+git worktree add ../paper-cleaning feat/clean-rounds
+
+# list, then prune when done
+git worktree list
+git worktree remove ../paper-did
+  \end{lstlisting}
+  \vspace{0.3cm}
+  \textbf{The pattern:}
+  \begin{itemize}
+    \setlength\itemsep{0.3em}
+    \item Three terminal panes. Three branches. Three Claude sessions. Zero merge conflicts during the session because each lives in its own checkout.
+    \item Scope by \emph{module}, not by task. (\texttt{cleaning/}, \texttt{analysis/}, \texttt{paper/}.)
+    \item Practical ceiling: 3--5 parallel sessions. Beyond that you cannot keep up with the diffs.
+    \item Cost: a 3-agent hour costs about a single-agent day. Use deliberately.
+  \end{itemize}

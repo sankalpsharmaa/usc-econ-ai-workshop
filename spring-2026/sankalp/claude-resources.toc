@@ -1,0 +1,62 @@
+\contentsline {section}{\numberline {1}Introduction}{3}{section.1}%
+\contentsline {section}{\numberline {2}Technical Fundamentals}{3}{section.2}%
+\contentsline {subsection}{\numberline {2.1}What Claude Code Is}{3}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Installation and Authentication}{3}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}Built-in Tools}{4}{subsection.2.3}%
+\contentsline {subsection}{\numberline {2.4}The CLAUDE.md Memory Hierarchy}{4}{subsection.2.4}%
+\contentsline {subsection}{\numberline {2.5}Slash Commands}{5}{subsection.2.5}%
+\contentsline {subsection}{\numberline {2.6}Custom Commands and Skills}{5}{subsection.2.6}%
+\contentsline {subsection}{\numberline {2.7}Subagents and the Agent Tool}{5}{subsection.2.7}%
+\contentsline {subsection}{\numberline {2.8}Model Context Protocol (MCP)}{6}{subsection.2.8}%
+\contentsline {subsection}{\numberline {2.9}Permission Modes}{6}{subsection.2.9}%
+\contentsline {subsection}{\numberline {2.10}Context Management}{7}{subsection.2.10}%
+\contentsline {subsection}{\numberline {2.11}Hooks}{7}{subsection.2.11}%
+\contentsline {subsection}{\numberline {2.12}Models and Costs}{7}{subsection.2.12}%
+\contentsline {subsection}{\numberline {2.13}Headless Mode and CI}{8}{subsection.2.13}%
+\contentsline {subsection}{\numberline {2.14}Recent Changes (v2.1 era)}{8}{subsection.2.14}%
+\contentsline {section}{\numberline {3}Annotated Literature: Economics-Specific Resources}{8}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Tier 1: Essential References}{8}{subsection.3.1}%
+\contentsline {paragraph}{Goldsmith-Pinkham (2026).}{8}{paragraph*.1}%
+\contentsline {paragraph}{Cunningham (2025--26).}{9}{paragraph*.2}%
+\contentsline {paragraph}{Panjwani (2026).}{9}{paragraph*.3}%
+\contentsline {paragraph}{P.\ Sant'Anna (2026).}{9}{paragraph*.4}%
+\contentsline {paragraph}{H.\ Sant'Anna (2026).}{9}{paragraph*.5}%
+\contentsline {paragraph}{Korinek (2025).}{10}{paragraph*.6}%
+\contentsline {paragraph}{Grundl (2026).}{10}{paragraph*.7}%
+\contentsline {subsection}{\numberline {3.2}Tier 2: Very Useful}{10}{subsection.3.2}%
+\contentsline {paragraph}{Blattman (2026).}{10}{paragraph*.8}%
+\contentsline {paragraph}{Straus and Hall (2026).}{10}{paragraph*.9}%
+\contentsline {paragraph}{Pepinsky (2026).}{11}{paragraph*.10}%
+\contentsline {paragraph}{Other key Tier-2 sources.}{11}{paragraph*.11}%
+\contentsline {subsection}{\numberline {3.3}Tier 3: Adjacent and Skeptic Counterweights}{13}{subsection.3.3}%
+\contentsline {section}{\numberline {4}Applied Workflows by Language and Task}{13}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Data Cleaning and Wrangling}{13}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Econometric Analysis}{13}{subsection.4.2}%
+\contentsline {paragraph}{Stata.}{13}{paragraph*.12}%
+\contentsline {paragraph}{R / Python.}{13}{paragraph*.13}%
+\contentsline {paragraph}{The Stata hallucination problem.}{14}{paragraph*.14}%
+\contentsline {subsection}{\numberline {4.3}Replication Packages (AEA)}{14}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}\LaTeX {}}{14}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}Literature Review and PDF Handling}{15}{subsection.4.5}%
+\contentsline {subsection}{\numberline {4.6}HPC and SLURM}{15}{subsection.4.6}%
+\contentsline {subsection}{\numberline {4.7}GIS and Spatial Workflows}{15}{subsection.4.7}%
+\contentsline {subsection}{\numberline {4.8}Polyglot Projects (Stata + R + Python + \LaTeX )}{16}{subsection.4.8}%
+\contentsline {section}{\numberline {5}Recommended Practices}{16}{section.5}%
+\contentsline {subsection}{\numberline {5.1}A Composite \texttt {CLAUDE.md} Template}{16}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}A Recommended \texttt {settings.json} for Academics}{17}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Git Workflow and Worktrees}{17}{subsection.5.3}%
+\contentsline {subsection}{\numberline {5.4}Sensitive Data: What Not to Send}{17}{subsection.5.4}%
+\contentsline {paragraph}{Anthropic data-retention reality.}{18}{paragraph*.15}%
+\contentsline {paragraph}{Practical settings.}{18}{paragraph*.16}%
+\contentsline {paragraph}{Hard enforcement via PreToolUse hooks.}{18}{paragraph*.17}%
+\contentsline {subsection}{\numberline {5.5}Cost Management}{18}{subsection.5.5}%
+\contentsline {subsection}{\numberline {5.6}Common Pitfalls}{19}{subsection.5.6}%
+\contentsline {subsection}{\numberline {5.7}Replication Audits}{19}{subsection.5.7}%
+\contentsline {subsection}{\numberline {5.8}Prompt Engineering for Research}{19}{subsection.5.8}%
+\contentsline {section}{\numberline {6}Empirical Evidence on Capability and Failure Modes}{20}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Grundl (2026): The Researcher-Variation Benchmark}{20}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Straus and Hall (2026): The Replication Audit}{20}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}Xu and Yang (2026): Reproducibility at Scale}{20}{subsection.6.3}%
+\contentsline {subsection}{\numberline {6.4}Synthesis}{20}{subsection.6.4}%
+\contentsline {section}{\numberline {7}Conclusion}{21}{section.7}%
+\contentsline {section}{Reading List}{21}{section.7}%
