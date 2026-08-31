@@ -2,29 +2,43 @@
 """
 SEC EDGAR: from recon to scraper.
 
-A worked example for the USC Economics AI Workshop. It has two halves that
-mirror how you should approach any unfamiliar data source.
+A worked example for the USC Economics AI Workshop. Read this file top to
+bottom. The code is the lesson: first find out what the site will give you,
+then pull data on the cheapest path that actually exists.
 
-  RECON   `probe` calls candidate endpoints and reports what is really there.
-          You run this before writing a single line of scraper.
+Two halves, on purpose:
 
-  SCRAPE  every other mode pulls actual data, cheapest path first.
+  RECON   `probe` calls candidate URLs and prints what is really there.
+          Run this before you write a scraper. Fifteen requests told us
+          the crawler we were about to write was unnecessary.
+
+  SCRAPE  every other mode pulls data, cheapest path first. `bulk` takes
+          two zip files the SEC already built. `filings` is last: it
+          fetches only the documents a filtered manifest named.
 
 The lesson EDGAR teaches: most of the time the "scraper" you need is not a
-scraper. The SEC publishes its own backend. Two zip files replace roughly
-20,000 API calls. Finding that out took nine minutes of probing and saved
-days of crawling. Do the recon.
+scraper. The search page is a front end. Behind it the SEC publishes JSON,
+indexes, and two multi-gigabyte zips. Those two zips replace roughly
+20,000 API calls. Finding that out took nine minutes.
+
+HOW TO READ THIS FILE
+    Configuration, then the HTTP client every mode shares, then helpers,
+    then URL builders and parsers (no network — that is why they are
+    testable), then the modes from cheapest to dearest.
+
+    Short path: CONFIGURATION, Fetcher.get, write_atomic, PROBE_LIST,
+    mode_demo. That is the whole argument.
 
 SAFE BY DEFAULT
-    Running this with no arguments downloads exactly ONE filing under 500 KB
-    and stops. Bulk modes are opt-in; the two multi-gigabyte ones need --yes.
+    No arguments downloads exactly ONE filing under 500 KB and stops.
+    Bulk modes are opt-in; the two multi-gigabyte ones need --yes.
 
     python3 sec_edgar.py                     one small filing, 3 requests
     python3 sec_edgar.py --dry-run           print the URLs, fetch nothing
     python3 sec_edgar.py selftest            offline assertions, no network
 
 RECON
-    python3 sec_edgar.py probe               call 20 endpoints, print a table
+    python3 sec_edgar.py probe               call every candidate URL, print a table
 
 PULLING DATA (cheapest to most expensive)
     python3 sec_edgar.py bulk --which submissions --yes    1.6 GB, everything
@@ -67,44 +81,71 @@ import certifi
 #############################################
 # CONFIGURATION                             #
 #############################################
+# Put the rules of the site in one place, not sprinkled through the fetch
+# code. If the SEC changes a host or a rate limit, this is the only block
+# that should move.
+#
+# Three public hosts. The pages at sec.gov/edgar are a front end over these.
+#   www.sec.gov/Archives  — the files themselves, plus bulk zips and indexes
+#   data.sec.gov          — JSON: filing histories and parsed financials
+#   efts.sec.gov          — full-text search (Elasticsearch, exposed as-is)
 
-# the SEC refuses generic agent strings with a 403 and an HTML scolding
+# A generic "python-urllib/3" User-Agent gets a 403 and an HTML scolding.
+# Name a real person and email. Override with SEC_UA so you do not commit
+# a classmate's contact string by accident.
 DEFAULT_UA = "Sankalp Sharma (USC) sankalp.sharma437@gmail.com"
 USER_AGENT = os.environ.get("SEC_UA", DEFAULT_UA)
 
-# the published ceiling is 10 requests/second, so leave headroom
+# The SEC's published cap is 10 requests per second. Stay under it. The
+# throttle is client-side: the API does not send a Retry-After header.
 RATE_LIMIT_PER_SEC = 8.0
 
 WWW = "https://www.sec.gov"
 DATA = "https://data.sec.gov"
 EFTS = "https://efts.sec.gov/LATEST/search-index"
 
-# the full-text index rejects from + size above this; measured, not guessed
+# Full-text search will not page past this. Measured by hitting the boundary,
+# not taken from docs. Treat it as a hard window, not a suggestion.
 FTS_WINDOW_MAX = 10_000
 FTS_PAGE_SIZE = 100
 
-# EDGAR quarterly indexes begin here
+# Quarterly indexes start in 1993Q1. Earlier years 404; that is expected.
 FIRST_INDEX_YEAR = 1993
 
-# outputs land next to this script, so moving the file moves its data
+# Outputs sit next to this file, so moving the script moves its data.
+# The folder is gitignored. Nothing downloaded belongs in the repo.
 OUT_ROOT = Path(__file__).resolve().parent / "data"
 
-# python.org Python ships no CA bundle that satisfies sec.gov; certifi does
+# Python from python.org ships no CA bundle that sec.gov accepts.
+# certifi does. Without this, every request dies as an SSL error that
+# looks like a network problem and is not one.
 SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 
 
 #############################################
 # HTTP LAYER                                #
 #############################################
+# Every mode goes through this client. That is the point. Rate limits,
+# retries, the User-Agent, and the SSL context live here, not in each
+# download function. If probe, demo, and bulk each rolled their own
+# urllib call, one of them would forget the User-Agent and fail in a
+# way that looks random.
 
 
 @dataclass
 class Fetcher:
-    """One rate-limited HTTP client, shared by every mode.
+    """One HTTP client, shared by every mode.
 
-    Four things every scraper needs and most first drafts skip: a real
-    throttle, retry with growing backoff, a byte cap so one huge response
-    cannot eat memory, and a request counter so you can see what a run cost.
+    Four things every scraper needs and most first drafts skip:
+
+      1. A real throttle. Not "sleep 1 second every time." Sleep only
+         the leftover gap so a slow server does not add extra delay.
+      2. Retry with growing backoff, but only on errors that retrying
+         can fix. A 404 will not become a 200 if you ask again.
+      3. A byte cap, so one huge response cannot eat memory.
+      4. A request counter, so you can see what a run actually cost.
+
+    Read get() next. That is the whole client.
     """
 
     user_agent: str = USER_AGENT
@@ -128,11 +169,15 @@ class Fetcher:
         self._last_call = time.monotonic()
 
     def get(self, url: str, max_bytes: int | None = None) -> bytes:
-        """Fetch one URL, retrying only on failures that retrying can fix.
+        """Fetch one URL. Retry only failures that retrying can fix.
 
-        A 404 means the file is not there and never will be, so retrying it
-        five times just wastes five requests. A 500 or a dropped connection
-        is worth another try. Telling those apart is most of the work.
+        A 404 means the file is not there and never will be. Retrying it
+        five times wastes five requests. A 500 or a dropped connection is
+        worth another try. Telling those apart is most of the work.
+
+        403 is special on this site. It almost always means the User-Agent
+        is missing or generic. The error message says that, because the
+        HTTP status alone will not.
         """
         last_error: Exception | None = None
 
@@ -151,13 +196,15 @@ class Fetcher:
                     request, timeout=self.timeout, context=SSL_CONTEXT
                 ) as response:
                     self.n_requests += 1
+                    # max_bytes is a safety cap, not a range request.
+                    # We still pay for the whole response on the wire;
+                    # we just refuse to hold more than this in memory.
                     raw = response.read() if max_bytes is None else response.read(max_bytes)
                     if "gzip" in (response.headers.get("Content-Encoding") or "").lower():
                         raw = gzip.decompress(raw)
                     return raw
 
             except urllib.error.HTTPError as err:
-                # a 403 here is almost always the User-Agent, so say so plainly
                 if err.code == 403:
                     raise RuntimeError(
                         f"403 from {url}\n"
@@ -166,7 +213,7 @@ class Fetcher:
                         "  export SEC_UA='Your Name your@email.edu'"
                     ) from err
 
-                # anything else in the 4xx range will not improve on a retry
+                # 4xx (except 429, "slow down") will not improve on a retry.
                 if err.code < 500 and err.code != 429:
                     raise
                 last_error = err
@@ -174,7 +221,8 @@ class Fetcher:
             except (urllib.error.URLError, TimeoutError, ssl.SSLError) as err:
                 last_error = err
 
-            # back off further each time, with jitter so parallel runs desync
+            # Grow the wait each time. A little jitter keeps two parallel
+            # runs from retrying in lockstep and hitting the cap together.
             backoff = 1.5 * (2**attempt) + random.uniform(0, 0.5)
             if self.verbose:
                 print(f"    retry {attempt + 1}/{self.max_retries} in {backoff:.1f}s")
@@ -183,7 +231,11 @@ class Fetcher:
         raise RuntimeError(f"gave up on {url} after {self.max_retries} tries: {last_error!r}")
 
     def get_json(self, url: str) -> dict:
-        """Fetch a URL and parse the body as JSON."""
+        """Fetch a URL and parse the body as JSON.
+
+        A one-liner so call sites stay readable. Failures still go through
+        get(), so the throttle, retries, and 403 message apply here too.
+        """
         return json.loads(self.get(url).decode("utf-8"))
 
     def head(self, url: str) -> tuple[int | str, int | None, str]:
@@ -213,6 +265,15 @@ class Fetcher:
 #############################################
 # OUTPUT HELPERS                            #
 #############################################
+# Two habits that save a night when a run dies at 80%.
+#
+#   write_atomic   write a sibling .tmp, then rename. Rename is one step.
+#                  A crash mid-write cannot leave a short file that looks done.
+#
+#   already_done   if the file exists and is non-empty, skip it. Re-running
+#                  the same command continues where it left off. The files
+#                  on disk are the progress log. There is no second database
+#                  to fall out of sync.
 
 
 def write_atomic(target_path: Path, payload: bytes) -> Path:
@@ -239,16 +300,25 @@ def already_done(target_path: Path) -> bool:
 
 
 def safe_filename(name: str) -> str:
-    """Flatten a name that might contain path separators into one filename."""
+    """Turn a document name that may contain slashes into one filename.
+
+    EDGAR primary documents can look like xsl144X01/primary_doc.xml.
+    Written as-is, that would create a subdirectory you did not mean to.
+    """
     return re.sub(r"[^A-Za-z0-9._-]+", "_", name)
 
 
 #############################################
 # URL BUILDERS                              #
 #############################################
-# These are pure functions with no I/O, which is why selftest can check every
-# one of them offline. Keeping URL construction separate from fetching is the
-# single cheapest way to make a scraper testable.
+# Pure functions: string in, URL out, no network. That is why selftest can
+# check every one of them on a plane. Keeping URL construction separate
+# from fetching is the cheapest way to make a scraper testable.
+#
+# The bugs these catch are the ones that otherwise show up as a confusing
+# 404 forty minutes into a crawl. Apple is CIK 320193 in archive paths and
+# CIK0000320193 in the JSON API. Mixing the two up is the most common
+# EDGAR mistake, which is why pad_cik exists.
 
 
 def pad_cik(cik: int | str) -> str:
@@ -271,28 +341,65 @@ def accession_nodash(accession: str) -> str:
 
 
 def url_submissions(cik: int | str) -> str:
+    """Filing history for one company, as JSON.
+
+    filings.recent is capped at about 1,000 rows. Older filings live in
+    shard files named under filings.files. See mode_submissions.
+    """
     return f"{DATA}/submissions/CIK{pad_cik(cik)}.json"
 
 
 def url_companyfacts(cik: int | str) -> str:
+    """Every XBRL fact one company has ever reported. Apple's file is ~4 MB."""
     return f"{DATA}/api/xbrl/companyfacts/CIK{pad_cik(cik)}.json"
 
 
+def url_companyconcept(cik: int | str, tag: str, taxonomy: str = "us-gaap") -> str:
+    """One XBRL tag for one company, every period.
+
+    The sibling of companyfacts. Use this when you want Revenues for Apple
+    and not the 4 MB blob of every tag Apple has ever reported.
+    """
+    return f"{DATA}/api/xbrl/companyconcept/CIK{pad_cik(cik)}/{taxonomy}/{tag}.json"
+
+
 def url_frames(tag: str, period: str, taxonomy: str = "us-gaap", unit: str = "USD") -> str:
+    """One tag, one period, every filer.
+
+    This is the panel builder. One call returned 6,289 firms for Assets
+    in 2023Q1. Period codes: CY2023Q1I (balance sheet, a point in time),
+    CY2023Q1 (income statement, a span of time), CY2023 (annual).
+    """
     return f"{DATA}/api/xbrl/frames/{taxonomy}/{tag}/{unit}/{period}.json"
 
 
 def url_filing_doc(cik: int | str, accession: str, document: str) -> str:
+    """The raw document in the archive.
+
+    The archive path uses the short CIK (no leading zeros) and the
+    accession with dashes stripped. The JSON API uses the opposite.
+    """
     return f"{WWW}/Archives/edgar/data/{int(cik)}/{accession_nodash(accession)}/{document}"
 
 
 def url_quarter_index(year: int, quarter: int, name: str = "master.zip") -> str:
+    """The quarterly filing manifest. Prefer master.zip over master.idx.
+
+    Same rows, about one eighth the bytes. 4 MB against 32 MB for a
+    recent quarter. Always take the zip.
+    """
     return f"{WWW}/Archives/edgar/full-index/{year}/QTR{quarter}/{name}"
 
 
 #############################################
 # PARSERS                                   #
 #############################################
+# Also pure: bytes or a dict in, a list of records out. No network.
+# selftest feeds them a tiny fake file and checks the rows.
+#
+# Do the ugly shape-shifting once, at the boundary. Downstream code then
+# loops over ordinary dicts and never has to know that the API stored
+# sixteen parallel arrays, or that the index file starts with a preamble.
 
 
 def parse_recent_filings(submissions_dict: dict) -> list[dict]:
@@ -348,21 +455,37 @@ def parse_master_idx(raw: bytes) -> list[dict]:
 #############################################
 # MODE: PROBE (do this before scraping)     #
 #############################################
+# You are here in the story: you do not have a scraper yet. You have a
+# list of URLs that might be the real backend. Hit each one. Write down
+# status, size, and (for JSON) a count. Then decide what to build.
+#
+# HEAD when you only need the size. GET when the body answers the
+# question (how many companies, how many tags). One exception is noted
+# on the companyfacts row: that host answers HEAD with a 403, which
+# looks like a User-Agent bug and is not one.
+#
+# The 13F row is a wrong guess, left in on purpose. A URL copied from a
+# sibling dataset looked right. It 404s. That is how scrapers ship and
+# quietly return nothing.
 
-# One row per endpoint worth knowing about. HEAD where the body is large and
-# only the size matters; GET where the body answers the question.
 PROBE_LIST = [
     ("GET", "ticker universe", f"{WWW}/files/company_tickers.json"),
+    ("GET", "ticker universe + exchange", f"{WWW}/files/company_tickers_exchange.json"),
+    # HEAD here is a known dud: gzip makes Content-Length 20 or missing.
+    # The file is ~40 MB uncompressed. GET it when you need the size.
     ("HEAD", "all filers (name to CIK)", f"{WWW}/Archives/edgar/cik-lookup-data.txt"),
     ("GET", "one company's filings", url_submissions(320193)),
     # GET not HEAD: data.sec.gov answers HEAD on this path with a 403,
     # which looks like a User-Agent problem and is not one
     ("GET", "one company's XBRL facts", url_companyfacts(320193)),
+    ("GET", "one tag, one company", url_companyconcept(320193, "Revenues")),
     ("GET", "one tag, every filer", url_frames("Assets", "CY2023Q1I")),
+    # URL taken from js/edgar_full_text_search.js on /edgar/search/, not guessed
     ("GET", "full-text search", f"{EFTS}?q=%22climate+risk%22&forms=10-K"),
     ("HEAD", "quarterly index (raw)", url_quarter_index(2024, 1, "master.idx")),
     ("HEAD", "quarterly index (zip)", url_quarter_index(2024, 1, "master.zip")),
     ("GET", "index directory listing", f"{WWW}/Archives/edgar/full-index/index.json"),
+    ("GET", "one filing's document list", f"{WWW}/Archives/edgar/data/320193/000032019324000123/index.json"),
     ("HEAD", "BULK all submissions", f"{WWW}/Archives/edgar/daily-index/bulkdata/submissions.zip"),
     ("HEAD", "BULK all XBRL facts", f"{WWW}/Archives/edgar/daily-index/xbrl/companyfacts.zip"),
     ("HEAD", "financial statements 2024q1", f"{WWW}/files/dera/data/financial-statement-data-sets/2024q1.zip"),
@@ -373,15 +496,18 @@ PROBE_LIST = [
 
 
 def mode_probe(args, fetcher: Fetcher) -> int:
-    """Call every candidate endpoint and report what is actually there.
+    """Call every candidate URL and print what is actually there.
 
-    This is the step people skip. Fifteen requests here told us the SEC
-    publishes a 1.6 GB zip of every company's filing history, which made the
-    per-company crawler we were about to write unnecessary.
+    This is the step people skip. A short probe told us the SEC
+    publishes a 1.6 GB zip of every company's filing history. That made
+    the per-company crawler we were about to write unnecessary.
 
-    Read the output for three things: what returns 200 without auth, how big
-    the bulk files are, and which guessed URLs 404. That last one matters.
-    The 13F row is left in on purpose as a wrong guess that fails loudly.
+    Read the table for three things:
+      - what returns 200 with no login
+      - how big the bulk files are
+      - which guessed URLs 404
+
+    That last one matters. The 13F row fails loudly on purpose.
     """
     print(f"Probing {len(PROBE_LIST)} endpoints at {fetcher.rate_limit:.0f} req/s.\n")
     print(f"{'status':>7}  {'size':>14}  what")
@@ -416,14 +542,22 @@ def mode_probe(args, fetcher: Fetcher) -> int:
 
 
 def _describe_json(url: str, body: bytes) -> str:
-    """Say something useful about a JSON body without printing all of it."""
+    """One short note for the probe table: a count, not a dump of the body.
+
+    The probe is supposed to be readable in a terminal. Printing 4 MB of
+    Apple's companyfacts JSON would hide the number that matters (505 tags).
+    Each branch below is "what question was this URL meant to answer."
+    """
     try:
         payload = json.loads(body)
     except Exception:
         return ""
 
-    if "company_tickers" in url:
+    if url.rstrip("/").endswith("company_tickers.json"):
         return f"{len(payload):,} companies"
+    if "company_tickers_exchange" in url:
+        rows = payload["data"] if isinstance(payload, dict) and "data" in payload else payload
+        return f"{len(rows):,} companies"
     if "/frames/" in url:
         return f"{len(payload['data']):,} filers in one call"
     if "search-index" in url:
@@ -434,6 +568,9 @@ def _describe_json(url: str, body: bytes) -> str:
     if "/companyfacts/" in url:
         n_tags = sum(len(v) for v in payload["facts"].values())
         return f"{n_tags:,} distinct tags for one company"
+    if "/companyconcept/" in url:
+        n_obs = sum(len(v) for v in payload["units"].values())
+        return f"{n_obs:,} observations of {payload.get('tag', 'tag')}"
     if "directory" in payload:
         return f"{len(payload['directory']['item'])} entries"
     return ""
@@ -442,10 +579,24 @@ def _describe_json(url: str, body: bytes) -> str:
 #############################################
 # MODE: DEMO (the default)                  #
 #############################################
+# You are here in the story: probe already showed the hierarchy.
+# This mode walks it for one file, in three requests:
+#
+#   1. company_tickers.json     who exists
+#   2. submissions/CIK....json  what one company filed
+#   3. Archives/.../document    the bytes of one document
+#
+# It is the default on purpose. A scraper whose no-argument behaviour is
+# "start downloading 26 million filings" will eventually be run by accident.
+# Make the safe path the lazy path.
 
 
 def pick_small_filing(filing_list: list[dict], max_bytes: int, rng: random.Random) -> dict | None:
-    """Choose one filing whose primary document is named and under the cap."""
+    """Pick one filing whose primary document is named and under the size cap.
+
+    The demo is a teaching default, not a random sample of EDGAR. We only
+    want a file small enough to open. 8-K HTML often fits; a 10-K does not.
+    """
     candidate_list = [
         f
         for f in filing_list
@@ -459,12 +610,8 @@ def pick_small_filing(filing_list: list[dict], max_bytes: int, rng: random.Rando
 def mode_demo(args, fetcher: Fetcher) -> int:
     """Download exactly one small filing, in three requests.
 
-    Deliberately the default. A scraper whose no-argument behaviour is
-    "start downloading 26 million filings" is a scraper someone will run by
-    accident. Make the safe path the lazy path.
-
-    The three requests trace the whole hierarchy: which companies exist, what
-    one company filed, and the bytes of one document.
+    Request 1: who exists. Request 2: what one company filed.
+    Request 3: the bytes of one document. Stop.
     """
     rng = random.Random(args.seed)
     out_dir = Path(args.output_dir or (OUT_ROOT / "demo"))
@@ -484,7 +631,9 @@ def mode_demo(args, fetcher: Fetcher) -> int:
     company_list = list(tickers_dict.values())
     print(f"        {len(company_list):,} companies with a ticker")
 
-    # try companies until one has a document under the size cap
+    # Many companies' recent filings are all large (10-Ks, 10-Qs). Skip
+    # those and try another ticker rather than downloading a 9 MB file
+    # "because it was first." The size cap is the point of the demo.
     chosen_company, chosen_filing = None, None
     for _ in range(args.max_tries):
         company = rng.choice(company_list)
@@ -523,7 +672,9 @@ def mode_demo(args, fetcher: Fetcher) -> int:
     else:
         write_atomic(target_path, fetcher.get(doc_url, max_bytes=args.max_bytes * 4))
 
-    # save what was fetched so the run can be audited later
+    # Sidecar metadata so you can see later what was fetched, from which
+    # seed, without reverse-engineering the filename. The document alone
+    # does not name the company.
     write_atomic(
         target_path.with_suffix(target_path.suffix + ".meta.json"),
         json.dumps(
@@ -552,6 +703,16 @@ def mode_demo(args, fetcher: Fetcher) -> int:
 #############################################
 # MODE: BULK (the cheapest path)            #
 #############################################
+# You are here in the story: probe found two zip files. submissions.zip
+# is every company's filing history. companyfacts.zip is every parsed
+# XBRL fact. Together they are about 3 GB. That is two requests.
+#
+# The alternative is one API call per company, about 20,000 of them, at
+# 8 per second: 40 minutes and 20,000 chances to hit a blip. Take the zip.
+#
+# --yes is required. Printing the size and then refusing is the feature.
+# A default of "start a 1.6 GB download" is how you fill a laptop by
+# tab-completing the wrong command.
 
 BULK_DICT = {
     "submissions": (
@@ -593,6 +754,9 @@ def mode_bulk(args, fetcher: Fetcher) -> int:
         print("\nalready on disk, skipping")
         return 0
 
+    # Stream 1 MB at a time. Reading the whole body first would hold 1.6 GB
+    # in RAM, then write it. Chunking keeps memory flat. Same atomic habit
+    # as write_atomic: land in .tmp, rename when the last byte is on disk.
     target_path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = target_path.with_suffix(".zip.tmp")
     request = urllib.request.Request(url, headers={"User-Agent": fetcher.user_agent})
@@ -614,20 +778,23 @@ def mode_bulk(args, fetcher: Fetcher) -> int:
 #############################################
 # MODE: FRAMES (one call, a whole panel)    #
 #############################################
+# You are here in the story: you want a firm-quarter panel of one line
+# item, the way Compustat is used. Asking each company for its assets is
+# one request per company. Asking this endpoint for the Assets tag in one
+# quarter returns roughly 6,300 companies in a single call.
+#
+# A full panel is a few hundred requests (one per tag-quarter), not a few
+# hundred thousand. If you are building a dataset of "assets for every
+# filer," start here, not with submissions.
 
 
 def mode_frames(args, fetcher: Fetcher) -> int:
     """Pull one XBRL tag for every filer in one period.
 
-    The endpoint economists should know about. Asking each company for its
-    assets is one request per company. Asking the frames endpoint for the
-    Assets tag in one quarter returns roughly 6,300 companies in a single
-    call. A firm-quarter panel is a few hundred requests, not a few hundred
-    thousand.
-
-    Period grammar: CY2023Q1I for stocks (balance sheet, measured at an
-    instant), CY2023Q1 for flows (income statement, measured over a period),
-    CY2023 for the annual figure.
+    Period codes: CY2023Q1I for stocks (balance sheet, a point in time),
+    CY2023Q1 for flows (income statement, a span of time), CY2023 for the
+    annual figure. The I suffix is easy to drop and then you get zeros,
+    because a stock has no duration value.
     """
     out_dir = Path(args.output_dir or (OUT_ROOT / "frames"))
     target_path = out_dir / f"{args.taxonomy}_{args.tag}_{args.unit}_{args.period}.json"
@@ -651,10 +818,23 @@ def mode_frames(args, fetcher: Fetcher) -> int:
 #############################################
 # MODE: SUBMISSIONS (one company at a time) #
 #############################################
+# You are here in the story: you want Apple's filing history, not every
+# company's. This is the per-company JSON from data.sec.gov.
+#
+# The trap: filings.recent holds only the most recent 1,000 filings.
+# Everything older sits in shard files listed under filings.files. A
+# scraper that reads only the recent block silently truncates history
+# at 2015 for an active filer, and nothing in the response says so.
+# Pass --shards or you will not notice.
 
 
 def resolve_ciks(ticker_list: list[str], cik_list: list[str], fetcher: Fetcher) -> list[tuple[int, str]]:
-    """Turn a mix of tickers and CIKs into a deduplicated (cik, label) list."""
+    """Turn a mix of tickers and CIKs into a deduplicated (cik, label) list.
+
+    Tickers are what people type. CIKs are what the API wants. The lookup
+    file is the same company_tickers.json the demo uses. A ticker that is
+    not in it is usually a private filer; use --cik for those.
+    """
     resolved_list: list[tuple[int, str]] = []
 
     if ticker_list:
@@ -681,10 +861,8 @@ def resolve_ciks(ticker_list: list[str], cik_list: list[str], fetcher: Fetcher) 
 def mode_submissions(args, fetcher: Fetcher) -> int:
     """Save the filing history for named companies.
 
-    Worth knowing: filings.recent holds only the most recent 1,000 filings.
-    Everything older sits in shard files listed under filings.files. A
-    scraper that reads only the recent block silently truncates history at
-    2015 for an active filer, and nothing in the response says so.
+    Without --shards this writes the recent 1,000 and prints how many
+    older shards exist. That print is the warning. Use it.
     """
     out_dir = Path(args.output_dir or (OUT_ROOT / "submissions"))
     target_list = resolve_ciks(args.ticker, args.cik, fetcher)
@@ -726,18 +904,23 @@ def mode_submissions(args, fetcher: Fetcher) -> int:
 #############################################
 # MODE: INDEX (the manifest)                #
 #############################################
+# You are here in the story: you want some of the documents, not all of
+# them. Do not crawl first. Build a list of every filing, filter it on
+# disk, then fetch only what you kept.
+#
+# Each quarter is one zip: CIK, company, form, date, path. 1993Q1 through
+# last quarter is about 135 files, ~290 MB as zips, ~27 million rows.
+# Filter "10-K in 2024" locally. Then mode_filings does the downloads.
+#
+# Quarters that do not exist (before EDGAR, or not yet filed) 404. That
+# is expected. The loop prints "not available" and continues.
 
 
 def mode_index(args, fetcher: Fetcher) -> int:
     """Download quarterly master indexes and flatten them to JSONL.
 
-    This is the manifest step, and it is what separates a crawl from a
-    targeted pull. Every filing since 1993 appears here with its CIK, form
-    type, date, and path. Fetch the manifest, filter it locally, then fetch
-    only the documents you decided you wanted.
-
-    Always take master.zip over master.idx. Same content, roughly one eighth
-    the bytes: 4 MB against 32 MB for a recent quarter.
+    Always fetches master.zip, not master.idx. Same rows, about one eighth
+    the bytes.
     """
     out_dir = Path(args.output_dir or (OUT_ROOT / "index"))
     this_year = time.gmtime().tm_year
@@ -775,19 +958,20 @@ def mode_index(args, fetcher: Fetcher) -> int:
 #############################################
 # MODE: FILINGS (fetch from the manifest)   #
 #############################################
+# You are here in the story: the manifest exists. You have already decided
+# which rows you want. This mode downloads those documents and nothing else.
+#
+# --max-items defaults to 10. A typo in --form should cost you ten
+# requests, not a million. Raise it once you have looked at what the
+# filter actually matched.
+#
+# One failed filing never stops the run. At this scale some fraction of
+# requests fail for reasons that have nothing to do with your code.
+# Crashing on filing 4,000 of 20,000 is a bad way to find that out.
 
 
 def mode_filings(args, fetcher: Fetcher) -> int:
-    """Download documents for filings selected from a quarter manifest.
-
-    --max-items defaults to 10 on purpose. A typo in --form should cost you
-    ten requests, not a million. Raise it once you have looked at what the
-    filter actually matched.
-
-    One failed filing never stops the run. At this scale some fraction of
-    requests will fail for reasons that have nothing to do with your code,
-    and a crash on filing 4,000 of 20,000 is a bad way to find that out.
-    """
+    """Download documents for filings selected from a quarter manifest."""
     manifest_path = Path(args.manifest)
     if not manifest_path.exists():
         print(f"manifest not found: {manifest_path}")
@@ -821,6 +1005,8 @@ def mode_filings(args, fetcher: Fetcher) -> int:
         try:
             body = fetcher.get(f"{WWW}/Archives/{row['path']}", max_bytes=args.max_bytes)
         except (RuntimeError, urllib.error.HTTPError) as err:
+            # Log it, count it, keep going. The summary at the end is how
+            # you notice a bad URL pattern, not a traceback on item 4,000.
             n_fail += 1
             print(f"  [{pos}/{len(row_list)}] FAILED {row['accession']}: {err}")
             continue
@@ -836,22 +1022,23 @@ def mode_filings(args, fetcher: Fetcher) -> int:
 #############################################
 # MODE: FULL-TEXT SEARCH                    #
 #############################################
+# You are here in the story: you want filings that mention a phrase, not
+# every 10-K. efts.sec.gov is Elasticsearch, exposed directly.
+#
+# Two traps, both measured:
+#
+#   1. You cannot page past 10,000 hits. from + size above that returns
+#      an error, not a partial page.
+#   2. The total field has a "relation". "eq" means the number is exact.
+#      "gte" means it is a floor. Treating 10000/gte as "there are 10,000
+#      hits" silently drops the rest of the sample.
+#
+# This mode refuses to start a query it cannot finish. Slice by date
+# (one month at a time) until each slice reports eq, then page through.
 
 
 def mode_fts(args, fetcher: Fetcher) -> int:
-    """Page a full-text query into JSONL, stopping at the real ceiling.
-
-    The index refuses from + size above 10,000 and returns an error, not a
-    partial result. Rather than paging until something breaks, this checks
-    the reported total first and refuses to start a query it cannot finish.
-
-    Watch the "relation" field. "eq" means the total is exact. "gte" means
-    the query is larger than the window and the number you see is a floor.
-    Treating a gte total as the true count is how people quietly lose data.
-
-    The fix is date slicing: run the same query one month at a time until
-    every slice reports eq.
-    """
+    """Page a full-text query into JSONL. Refuse to start if it cannot finish."""
     out_dir = Path(args.output_dir or (OUT_ROOT / "fts"))
     slug = re.sub(r"[^a-z0-9]+", "_", args.query.lower()).strip("_")[:40]
     target_path = out_dir / f"{slug}_{args.start or 'all'}_{args.end or 'all'}.jsonl"
@@ -861,6 +1048,7 @@ def mode_fts(args, fetcher: Fetcher) -> int:
         return 0
 
     def fetch_page(offset: int) -> dict:
+        # `from` is Elasticsearch's offset, not a date. 100 hits per page.
         param_dict = {"q": args.query, "from": offset}
         if args.forms:
             param_dict["forms"] = args.forms
@@ -901,14 +1089,22 @@ def mode_fts(args, fetcher: Fetcher) -> int:
 #############################################
 # SELFTEST                                  #
 #############################################
+# You are here in the story: before any network call, check the parts that
+# do not need one. URL builders and parsers are pure functions. If pad_cik
+# is wrong, every submissions URL 404s. Better to find that in half a
+# second on a fake Apple CIK than forty minutes into a crawl.
+#
+# Run this first: python3 sec_edgar.py selftest
 
 
 def mode_selftest(args, fetcher: Fetcher) -> int:
     """Check every pure function offline. No network, no files written.
 
-    The point of separating URL building and parsing from fetching: all of
-    this runs in well under a second and catches the errors that would
-    otherwise show up as a confusing 404 forty minutes into a crawl.
+    Three families of bugs, all of which look like "the site is down" when
+    they are actually a string:
+      - CIK padding (archive vs JSON API)
+      - URL shapes (wrong host, missing CIK zeros, leftover dashes)
+      - parsers (index preamble, parallel-array transpose, size filter)
     """
     # CIK padding, the most common EDGAR mistake
     assert pad_cik(320193) == "0000320193"
@@ -921,6 +1117,9 @@ def mode_selftest(args, fetcher: Fetcher) -> int:
 
     # URL shapes, checked against real working URLs
     assert url_submissions(320193) == "https://data.sec.gov/submissions/CIK0000320193.json"
+    assert url_companyconcept(320193, "Revenues") == (
+        "https://data.sec.gov/api/xbrl/companyconcept/CIK0000320193/us-gaap/Revenues.json"
+    )
     assert url_frames("Assets", "CY2023Q1I") == (
         "https://data.sec.gov/api/xbrl/frames/us-gaap/Assets/USD/CY2023Q1I.json"
     )
@@ -968,6 +1167,12 @@ def mode_selftest(args, fetcher: Fetcher) -> int:
 #############################################
 # CLI                                       #
 #############################################
+# argparse only. No hidden flags. The module docstring is --help.
+#
+# Defaulting to demo is a code choice, not a docs choice: if the user
+# types the filename and hits enter, they get one small file, not 26
+# million. Inserting "demo" when no subcommand is present is how.
+
 
 SUBCOMMAND_SET = {
     "probe", "demo", "bulk", "frames", "submissions", "index", "filings", "fts", "selftest",
@@ -975,8 +1180,9 @@ SUBCOMMAND_SET = {
 
 
 def build_parser() -> argparse.ArgumentParser:
-    # flags every mode accepts, attached to each subparser as a parent so that
-    # `sec_edgar.py --force` works the same as `sec_edgar.py demo --force`
+    # Shared flags are a parent parser so `sec_edgar.py --force` and
+    # `sec_edgar.py demo --force` mean the same thing. Easy to get wrong
+    # if each subparser declares --force itself.
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--user-agent", default=USER_AGENT, help="your name and email, required by the SEC")
     common.add_argument("--rate", type=float, default=RATE_LIMIT_PER_SEC, help="requests per second")
@@ -1048,7 +1254,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     token_list = list(sys.argv[1:] if argv is None else argv)
 
-    # no subcommand anywhere means the safe single-file demo
+    # No subcommand anywhere means the safe single-file demo.
+    # `python3 sec_edgar.py` and `python3 sec_edgar.py --dry-run` both
+    # land here. Bulk cannot.
     if not any(token in SUBCOMMAND_SET for token in token_list):
         token_list.insert(0, "demo")
 
@@ -1056,6 +1264,7 @@ def main(argv: list[str] | None = None) -> int:
     fetcher = Fetcher(user_agent=args.user_agent, rate_limit=args.rate)
 
     if args.mode != "selftest":
+        # Print this first so a 403 is diagnosed before anything else runs.
         print(f"User-Agent: {args.user_agent}  (override with SEC_UA)\n")
 
     return args.func(args, fetcher)

@@ -1,6 +1,6 @@
 # SEC EDGAR: API Endpoint Discovery
 
-Recon date: 2026-08-22. All endpoints below were called live from this machine. Status codes, byte counts, and record counts are measured, not quoted from documentation.
+Recon date: 2026-08-24 (re-run; first pass 2026-08-22). All endpoints below were called live from this machine. Status codes, byte counts, and record counts are measured, not quoted from documentation.
 
 ## Architecture
 
@@ -12,7 +12,13 @@ There is nothing to reverse-engineer. EDGAR is not a portal wrapped around a hid
 | `data.sec.gov` | AWS API Gateway JSON API | Per-company filing histories and parsed XBRL financial facts |
 | `efts.sec.gov/LATEST/search-index` | Elasticsearch, exposed directly | Full-text search across 2001-present filings |
 
-The `www.sec.gov/edgar/` pages you see in a browser are thin front-ends over these three. `cgi-bin/browse-edgar` still exists and still works, but every dataset it returns is available in bulk elsewhere.
+The pages you see in a browser are thin front-ends over these three. Fingerprint, 2026-08-24:
+
+- `https://www.sec.gov/edgar/` redirects to `/submit-filings` (the filer portal). That is not the search UI.
+- Search lives at `https://www.sec.gov/edgar/search/`. Its JS (`js/edgar_full_text_search.js`) hardcodes `https://efts.sec.gov/LATEST/search-index`. The Drupal header search (`smartSearch.js`) hits the same URL. The search box is not a form that needs replaying.
+- Official API docs at `/search-filings/edgar-application-programming-interfaces` list four JSON routes (`submissions`, `companyconcept`, `companyfacts`, `frames`) plus the two nightly zips. `companyconcept` was missing from the first probe list; it is in `PROBE_LIST` now.
+- `cgi-bin/browse-edgar` still exists and still works, but every dataset it returns is available in bulk elsewhere.
+- No `__VIEWSTATE`, no `_csrf`, no cookies on these public GETs. The only gate is the `User-Agent` header.
 
 ### The one hard requirement
 
@@ -38,11 +44,12 @@ Python note: `urllib` on this machine fails TLS verification against sec.gov. Pa
 - Fields: `cik_str`, `ticker`, `title`.
 
 **`GET https://www.sec.gov/files/company_tickers_exchange.json`**
-- Same 10,403 rows, plus `exchange`. Fields: `cik`, `name`, `ticker`, `exchange`.
+- Same 10,403 rows, 521,857 bytes, plus `exchange`. Fields: `cik`, `name`, `ticker`, `exchange`.
 
 **`GET https://www.sec.gov/Archives/edgar/cik-lookup-data.txt`**
-- 40,002,136 bytes, 1,056,221 lines. Format `COMPANY NAME:CIK:`.
+- 40,002,136 bytes uncompressed, 1,056,221 lines. Format `COMPANY NAME:CIK:`.
 - This is the full EDGAR filer universe, not just listed companies. Use it when you need private issuers, funds, and individual insider filers.
+- HEAD is useless here. With `Accept-Encoding: gzip` the `Content-Length` comes back as 20. Without it, the header is missing. GET and count.
 
 ### 2. Per-company filing history
 
@@ -58,7 +65,7 @@ Python note: `urllib` on this machine fails TLS verification against sec.gov. Pa
 - Every reported XBRL fact for one company, every period, every filing. Apple's file is 3,789,099 bytes and holds 503 `us-gaap` tags plus 2 `dei` tags.
 
 **`GET https://data.sec.gov/api/xbrl/companyconcept/CIK##########/us-gaap/{tag}.json`**
-- One tag for one company. Apple + `Revenues` returned 2,252 bytes. Use when you want one line item and not the 3.8 MB blob.
+- One tag for one company. Apple + `Revenues` returned 2,252 bytes and **11 observations**. That is not "Apple has almost no revenue data." Recent 10-Ks use `RevenueFromContractWithCustomerExcludingAssessedTax` (117 observations). Older ones use `SalesRevenueNet` (210). Tag names are not English synonyms. Check `companyfacts` for the real tag before you build a panel on the word you would type.
 
 **`GET https://data.sec.gov/api/xbrl/frames/{taxonomy}/{tag}/{unit}/{period}.json`**
 - The cross-sectional cut: one tag, one period, every filer at once. `us-gaap/Assets/USD/CY2023Q1I` returned 6,289 companies in one call.
@@ -100,7 +107,7 @@ Python note: `urllib` on this machine fails TLS verification against sec.gov. Pa
 - `https://www.sec.gov/Archives/edgar/data/{cik}/index.json` (all accessions for a filer)
 - `https://www.sec.gov/Archives/edgar/data/{cik}/{accession-no-dashes}/index.json` (every document in one filing, with per-file byte sizes, including a prebuilt `{accession}-xbrl.zip`)
 
-That last one is the workhorse. Given an accession number from `master.idx`, one JSON call lists every exhibit in that filing, and each is a plain static file.
+That last one is the workhorse. Given an accession number from `master.idx`, one JSON call lists every exhibit in that filing, and each is a plain static file. Apple's FY2024 10-K (`000032019324000123`) returned **105 documents** in 10,170 bytes.
 
 ### 6. Prebuilt bulk archives (start here, not with the crawler)
 
@@ -155,7 +162,8 @@ These 404'd during recon and should not be coded against:
 3. **Two zips get you 90% of the structured data.** `submissions.zip` (1.56 GB) and `companyfacts.zip` (1.41 GB) hold every company's filing history and every parsed financial fact.
 4. **Full-text search caps at 10,000 results per query.** Confirmed by hitting the exact boundary. Any bulk text search must be sliced by date.
 5. **The `frames` endpoint is the cheapest panel builder.** One call returned 6,289 firms for a single tag and quarter.
-6. **DERA URL prefixes are unstable.** Files have moved between `/files/dera/`, `/files/structureddata/`, and `/files/datastandardsinnovation/`. Enumerate from the landing page, never from a hardcoded pattern.
+6. **Tag names are not English.** Apple `Revenues` is 11 observations. `RevenueFromContractWithCustomerExcludingAssessedTax` is 117. Look the tag up in `companyfacts` before you build a panel.
+7. **DERA URL prefixes are unstable.** Files have moved between `/files/dera/`, `/files/structureddata/`, and `/files/datastandardsinnovation/`. Enumerate from the landing page, never from a hardcoded pattern.
 
 ## Recommended extraction path
 
@@ -175,4 +183,4 @@ Every number above came from a live call. Reproduce the core of it with:
 python3 sec_edgar.py probe
 ```
 
-That calls 15 endpoints, prints status and size for each, and writes the raw results to `data/probe/probe_results.json`. The scraper built from this recon is `sec_edgar.py` in the same folder; it defaults to downloading one small filing.
+That calls 18 endpoints, prints status and size for each, and writes the raw results to `data/probe/probe_results.json`. Re-run 2026-08-24: 17/18 returned 200; the 13F guess still 404s. The scraper built from this recon is `sec_edgar.py` in the same folder; it defaults to downloading one small filing.

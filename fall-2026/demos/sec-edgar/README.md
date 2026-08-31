@@ -24,7 +24,7 @@ The default is deliberately harmless: three requests, one document under 500 KB.
 
 The instinct when you need data from a website is to write a scraper against the pages you can see. On EDGAR that instinct costs you days. The SEC publishes its own backend, and one of the files it publishes is a 1.6 GB zip holding every company's complete filing history.
 
-Finding that out took fifteen requests. `probe` mode is those fifteen requests:
+Finding that out took a short probe. `probe` mode is those requests:
 
 ```bash
 python3 sec_edgar.py probe
@@ -34,13 +34,17 @@ python3 sec_edgar.py probe
  status            size  what
 ------------------------------------------------------------------------------
     200         796,148  ticker universe  10,403 companies
+    200         521,857  ticker universe + exchange  10,403 companies
     200               -  all filers (name to CIK)
     200         164,439  one company's filings  1,001 recent filings
     200       3,789,099  one company's XBRL facts  505 distinct tags
+    200           2,252  one tag, one company  11 observations of Revenues
     200         839,867  one tag, every filer  6,289 filers in one call
-    200          60,081  full-text search  1,453 hits (eq)
+    200          60,087  full-text search  1,453 hits (eq)
     200      33,207,145  quarterly index (raw)
     200       4,262,545  quarterly index (zip)
+    200           5,581  index directory listing  53 entries
+    200          10,170  one filing's document list  105 entries
     200   1,559,612,838  BULK all submissions
     200   1,407,131,132  BULK all XBRL facts
     404               -  13F holdings (wrong guess)
@@ -52,6 +56,8 @@ Four things that table tells you, none of which you learn by reading the HTML:
 2. The two BULK rows replace roughly 20,000 individual API calls.
 3. `quarterly index (zip)` is 4 MB against 33 MB for the same content. Always take the zip.
 4. One row 404s. That URL was a reasonable guess and it was wrong. Guessing URL patterns from a sibling dataset is how people ship scrapers that quietly return nothing.
+
+A fifth thing, only visible once `companyconcept` is in the list: Apple + tag `Revenues` is 11 observations. The real recent tag is `RevenueFromContractWithCustomerExcludingAssessedTax`. The English word is not the field name.
 
 ## What the script does
 
@@ -69,7 +75,7 @@ Four things that table tells you, none of which you learn by reading the HTML:
 
 ## Five habits worth copying
 
-**Recon before code.** Fifteen requests told us the crawler we were about to write was unnecessary.
+**Recon before code.** A short probe told us the crawler we were about to write was unnecessary.
 
 **Make the safe path the lazy path.** No arguments means one small file. A scraper whose default is "start downloading 26 million filings" will eventually be run by accident.
 
