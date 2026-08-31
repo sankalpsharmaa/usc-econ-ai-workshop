@@ -1,0 +1,269 @@
+% Inbuilt themes in beamer
+\documentclass[aspectratio=1610, xcolor={dvipsnames}]{beamer}
+% \documentclass[xetex,notheorems,hyperref={pdfpagelabels=true},xcolor={table}]{beamer}
+\usetheme{metropolis}
+
+\usepackage{amsmath}
+\usepackage{subfig} % allows for nesting figures
+\usepackage{tikz}
+\usepackage{graphicx}
+\usepackage{sidecap}
+
+% \usepackage{xcolor} % allows defining custom colors
+\usepackage{annotate-equations}
+\usepackage{array} % allows vertical-align of text within tables
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{datetime2}
+\usepackage{ragged2e} % Adding \jusifying to blocks
+% \usepackage[dvipsnames*]{xcolor}
+
+
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric}
+
+\definecolor{bhblue}{RGB}{26,84,162}
+\definecolor{bhgray}{RGB}{80,80,80}
+\definecolor{codebg}{HTML}{F5F5F5}
+\definecolor{ccwarm}{HTML}{D97757}
+\definecolor{lightgray}{RGB}{211,211,211}
+
+\lstdefinestyle{shell}{
+  basicstyle=\ttfamily\footnotesize,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  framesep=4pt,
+  rulecolor=\color{lightgray},
+  breaklines=true,
+  showstringspaces=false
+}
+
+\lstdefinestyle{py}{
+  language=Python,
+  basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\color{bhblue},
+  commentstyle=\color{bhgray}\itshape,
+  stringstyle=\color{bhgray},
+  backgroundcolor=\color{codebg},
+  frame=single,
+  framesep=4pt,
+  rulecolor=\color{lightgray},
+  breaklines=true,
+  showstringspaces=false
+}
+
+% Theme choice:
+\setbeamercolor{background canvas}{bg=white}
+% Defining `bgcolor' to the be the same as the metropolis background color
+% \definecolor{bgcolor}{HTML}{fafafa}
+% \definecolor{maroon}{HTML}{ba3232}
+% \AtBeginSection[]{} % Redefine to suppress section slides
+
+% \usebeamerfont{title}
+\setbeamerfont{title}{size=\large}
+\setbeamerfont{subtitle}{size=\normalsize}
+\captionsetup[figure]{labelformat=empty}
+\captionsetup[table]{labelformat=empty}
+
+% Title page details: 
+\title{Agentic AI for Knowledge Production}
+% \subtitle{Melissa Dell (\textit{AER}, 2015)}
+\author{Sankalp Sharma, Joshua Levy}
+\institute{University of Southern California}
+\date{August 25th, 2026}
+
+
+
+\begin{document}
+
+% Title page frame
+\begin{frame}
+    \titlepage
+\end{frame}
+\begin{frame}{Today's Agenda}
+    \tableofcontents
+\end{frame}
+
+\section{Gentzkow and Shapiro (2014) revisited}
+
+\begin{frame}{Automation}
+    \Large
+    \textit{Automate everything that can be automated}\\
+
+    \textit{Write a single script that executes all code from beginning to end}\\
+\end{frame}
+\begin{frame}{Version Control}
+    \Large
+    \textit{Store code and data under version control}\\
+
+    \textit{Run the whole directory before checking it back in}\\
+\end{frame}
+\begin{frame}{Folder Structure}
+    \Large
+    \textit{Separate directories by function}\\
+
+    \textit{Separate files into inputs and outputs}\\
+
+    \textit{Make directories portable}\\
+\end{frame}
+\begin{frame}{Abstraction}
+    \Large
+    \textit{Abstract to eliminate redundancy}\\
+
+    \textit{Abstract improve clarity}\\
+
+    \textit{Otherwise, don't abstract}\\
+\end{frame}
+\begin{frame}{Documentation}
+    \Large
+    \textit{Don't write documentation you will not maintain}\\
+
+    \textit{Code should be self-documenting}\\
+\end{frame}
+\begin{frame}{Management}
+    \Large
+    \textit{Manage tasks with a task management system}\\
+
+    \textit{Email is not a task management system}\\
+\end{frame}
+
+
+
+\section{Tests}
+
+\begin{frame}{Tests}
+
+    Tests are \textbf{VERY} important.
+
+    \vspace{0.5cm}
+    \begin{columns}[T,onlytextwidth]
+        \column{0.47\textwidth}
+        {\color{bhblue}\bfseries Reinhart and Rogoff (2010)}
+
+        \vspace{0.15cm}
+        Five countries dropped from one average.
+
+        \vspace{0.15cm}
+        $-0.1\%$ published. $+2.2\%$ corrected.
+
+        \vspace{0.15cm}
+        One row count catches it.
+
+        \column{0.47\textwidth}
+        {\color{ccwarm}\bfseries The agent games the check}
+
+        \vspace{0.15cm}
+        Hardcodes the answer: 33\% of the time.
+
+        \vspace{0.15cm}
+        Fakes a solution: 22\%.
+
+        \vspace{0.15cm}
+        \footnotesize (EvilGenie, ambiguous specs. Yours are ambiguous.)
+    \end{columns}
+
+    \vspace{0.7cm}
+    \begin{center}
+        {\color{bhblue}\bfseries\large If you're not reading code, write the check.}
+    \end{center}
+
+\end{frame}
+
+\begin{frame}{Four checks}
+
+    \vspace{0.35cm}
+    \renewcommand{\arraystretch}{1.7}
+    \small
+    \begin{tabular}{@{}p{0.20\textwidth} p{0.24\textwidth} p{0.48\textwidth}@{}}
+        \toprule
+        {\color{bhblue}\bfseries Check} & {\color{bhblue}\bfseries When} & {\color{bhblue}\bfseries Example}                       \\
+        \midrule
+        Data assertion                  & Every merge                    & Rows in $=$ rows out. \texttt{isid id year}.            \\
+        Known answer                    & Closed form                    & SVG to lat/lon: round-trip the four corners.            \\
+        Parameter recovery              & No answer                      & BLP: simulate from $\beta$, get $\beta$ back.           \\
+        Coverage                        & Randomness                     & Bootstrap: 95\% interval covers truth 95\% of the time. \\
+        \bottomrule
+    \end{tabular}
+
+    \vspace{0.6cm}
+    {\color{bhblue}\bfseries None apply?} Test what cannot change. Shuffle rows, coefficients hold.
+    Weights of one, unweighted run.
+
+\end{frame}
+
+\begin{frame}[fragile]{What you type}
+
+    \vspace{0.2cm}
+    \begin{columns}[T,onlytextwidth]
+        \column{0.56\textwidth}
+        \begin{lstlisting}[style=py]
+# tests/test_clean.py     $ pytest
+def test_merge_keeps_every_parcel():
+    out = merge_owners(parcels, owners)
+    assert len(out) == len(parcels)
+
+def test_boot_se_matches_ols():
+    rng = np.random.default_rng(42)
+    np.testing.assert_allclose(
+        boot_se(X, y, rng), ols_se(X, y),
+        rtol=0.05)
+\end{lstlisting}
+
+        \column{0.40\textwidth}
+        \vspace{0.1cm}
+        \small
+        \texttt{test\_*.py}, \texttt{test\_*()}, \texttt{assert}, run \texttt{pytest}.
+        That is the framework.
+
+        \vspace{0.35cm}
+        Stata: \texttt{assert}, \texttt{isid}.\\
+        R: \texttt{testthat}.
+
+        \vspace{0.35cm}
+        Seed anything random.\\
+        Never \texttt{==} on floats.\\
+        1{,}000 rows, not the full run.\\
+        Freeze Table 3 and diff it.
+    \end{columns}
+
+\end{frame}
+
+\begin{frame}[fragile]{What you tell the agent}
+
+    \vspace{0.2cm}
+    \begin{columns}[T,onlytextwidth]
+        \column{0.44\textwidth}
+        {\footnotesize\color{ccwarm}\bfseries Green checkmark}
+        \begin{lstlisting}[style=shell]
+Write the BLP estimator
+and add some tests.
+    \end{lstlisting}
+
+        \column{0.52\textwidth}
+        {\footnotesize\color{bhblue}\bfseries Checked estimator}
+        \begin{lstlisting}[style=shell]
+Write the test first, then stop.
+Simulate 500 markets from
+beta = [-2, 1, 0.5]. Assert we
+recover it within 0.05.
+Show me the test.
+    \end{lstlisting}
+    \end{columns}
+
+    \vspace{0.55cm}
+    \small
+    You approve the test. The agent writes the code.
+
+    \vspace{0.2cm}
+    Say it in the prompt: never edit a test to make it pass.
+
+    \vspace{0.2cm}
+    Break the code once. A test that never fails is testing nothing.
+
+    \vspace{0.6cm}
+    \footnotesize\color{bhgray}
+    Gentzkow and Shapiro, \emph{Code and Data for the Social Sciences}.
+    \texttt{pyblp/tests/test\_blp.py}.
+
+\end{frame}
+
+\end{document}
