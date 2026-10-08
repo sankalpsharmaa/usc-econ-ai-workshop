@@ -81,9 +81,11 @@ function Install-IfMissing {
     }
 }
 
-function Install-WithWinget($Id, $Source) {
+function Install-WithWinget($Id, $Source, [switch]$Force) {
     $wgArgs = @('install', '-e', '--id', $Id, '--accept-source-agreements', '--accept-package-agreements')
     if ($Source) { $wgArgs += @('--source', $Source) }
+    # --force skips winget's "already installed, look for an upgrade" path and runs the installer anyway
+    if ($Force)  { $wgArgs += '--force' }
     & winget @wgArgs
 }
 
@@ -138,6 +140,14 @@ if ($Rscript) {
     Install-WithWinget 'RProject.Rtools'
     Update-SessionPath
     $Rscript = Find-Rscript
+    if (-not $Rscript) {
+        # winget trusts the registry: a half-removed R leaves its entry behind, winget then
+        # says "already installed, no upgrade available" and puts no files on disk
+        Write-Host 'winget reports R as installed but Rscript.exe is missing. Forcing a reinstall...'
+        Install-WithWinget 'RProject.R' -Force
+        Update-SessionPath
+        $Rscript = Find-Rscript
+    }
     if ($Rscript) { Record 'INSTALLED' 'R' $Rscript } else { Record 'FAILED' 'R' "see $Log" }
 } else {
     Record 'MANUAL' 'R' 'https://cran.r-project.org/bin/windows/base/'

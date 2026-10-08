@@ -102,8 +102,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Hide the preinstalled R and Julia
+      - name: Remove the preinstalled R and Julia
         run: |
+          # winget decides "already installed" from the registry, not from the
+          # filesystem. Renaming the folders alone leaves the registry entries, so
+          # the install step sees R, prints "no available upgrade", installs
+          # nothing, and the script reports R as FAILED. Uninstall for real
+          # first (the uninstaller lives inside the R folder), then hide any
+          # leftovers so Get-Command cannot find them either.
+          $PSNativeCommandUseErrorActionPreference = $false
+          foreach ($id in 'RProject.R', 'RProject.Rtools', 'Julialang.Julia', 'Julialang.Juliaup') {
+            Write-Host "winget uninstall $id"
+            & winget uninstall -e --id $id --silent --accept-source-agreements --disable-interactivity 2>&1 | Out-Host
+          }
           foreach ($tool in 'julia', 'Rscript') {
             $cmd = Get-Command $tool -ErrorAction SilentlyContinue
             if ($cmd) {
@@ -115,8 +126,11 @@ jobs:
           $r = Join-Path $env:ProgramFiles 'R'
           if (Test-Path $r) { Rename-Item -Path $r -NewName 'R-hidden' -ErrorAction Continue }
           $env:Path = ($env:Path -split ';' | Where-Object { $_ -notmatch 'julia|\\R\\' }) -join ';'
-          if (Get-Command julia -ErrorAction SilentlyContinue) { throw 'julia is still visible, the test would prove nothing' }
-          Write-Host 'R and Julia are hidden.'
+          foreach ($tool in 'julia', 'Rscript') {
+            if (Get-Command $tool -ErrorAction SilentlyContinue) { throw "$tool is still visible, the test would prove nothing" }
+          }
+          & winget list -e --id RProject.R --accept-source-agreements --disable-interactivity 2>&1 | Out-Host
+          Write-Host 'R and Julia are gone.'
 
       - name: Full install
         run: ./setup/setup-windows.ps1 -Yes
