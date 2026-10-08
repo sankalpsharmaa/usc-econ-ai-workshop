@@ -115,12 +115,13 @@ jobs:
             Write-Host "winget uninstall $id"
             & winget uninstall -e --id $id --silent --accept-source-agreements --disable-interactivity 2>&1 | Out-Host
           }
+          # The runner's julia is a Chocolatey shim, so rename the executables
+          # themselves rather than a grandparent folder (that took all of
+          # C:\ProgramData\Chocolatey with it).
           foreach ($tool in 'julia', 'Rscript') {
-            $cmd = Get-Command $tool -ErrorAction SilentlyContinue
-            if ($cmd) {
-              $root = Split-Path (Split-Path $cmd.Source)
-              Write-Host "Renaming $root"
-              Rename-Item -Path $root -NewName ((Split-Path $root -Leaf) + '-hidden') -ErrorAction Continue
+            foreach ($cmd in @(Get-Command $tool -All -ErrorAction SilentlyContinue)) {
+              Write-Host "Hiding $($cmd.Source)"
+              Rename-Item -Path $cmd.Source -NewName ($cmd.Name + '.hidden') -ErrorAction Continue
             }
           }
           $r = Join-Path $env:ProgramFiles 'R'
@@ -129,8 +130,13 @@ jobs:
           foreach ($tool in 'julia', 'Rscript') {
             if (Get-Command $tool -ErrorAction SilentlyContinue) { throw "$tool is still visible, the test would prove nothing" }
           }
+          # winget must not list R any more either, or the install step would skip it again
           & winget list -e --id RProject.R --accept-source-agreements --disable-interactivity 2>&1 | Out-Host
+          if ($LASTEXITCODE -eq 0) { throw 'winget still lists RProject.R as installed, the test would prove nothing' }
           Write-Host 'R and Julia are gone.'
+          # the step's exit code is the last native command's, and that winget list
+          # exits non-zero exactly when we want it to
+          exit 0
 
       - name: Full install
         run: ./setup/setup-windows.ps1 -Yes
